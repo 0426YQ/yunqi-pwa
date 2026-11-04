@@ -347,12 +347,15 @@ const APP_SCHEMES={
  'B站':k=>'bilibili://search?keyword='+encodeURIComponent(k),
  '苹果播客':k=>'pcast://search?term='+encodeURIComponent(k),
 };
+/* 苹果播客：直接落到搜索页（避开加载慢的 Browse 首页） */
+const PODCAST_SEARCH='pcast://search';
 function jumpChips(src,kw){
-  const mains=[src];
+  let mains=[src];
   if(src==='小红书')mains.push('抖音');
   if(src==='抖音')mains.push('小红书');
   if(src==='微博')mains.push('百度');
-  if(src==='播客平台')mains.push('B站');  if(src==='学习强国'||src==='申材有道')mains.push('必应');
+  if(src==='播客平台'||src==='喜马拉雅')mains=['苹果播客','B站'];  // 播客：自带播客 + B站，两个都能用
+  if(src==='学习强国'||src==='申材有道')mains.push('必应');
   if(src==='网络')mains.push('百度');
   if(src==='财经综合')mains.push('必应');
   return '<div class="jump-row">'+[...new Set(mains)].map(p=>
@@ -372,7 +375,7 @@ function doJump(p,k){
     try{
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(k);}
       else{const ta=document.createElement('textarea');ta.value=k;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
-      toast('已复制关键词，进入后长按搜索框粘贴 🎧');
+      toast('已复制关键词，点右上角搜索框粘贴 🎧');
     }catch(e){}
   }
   let left=false;

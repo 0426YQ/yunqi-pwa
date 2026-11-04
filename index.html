@@ -177,6 +177,7 @@ header{text-align:center;padding:6px 0 4px;}
 .info-item .i-src{font-size:10px;color:#b9a0aa;margin-top:5px;}
 .jump-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
 .jump{background:#fdeef3;color:#e88ca4;font-size:11px;font-weight:600;text-decoration:none;
+  border:none;cursor:pointer;font-family:inherit;
   border-radius:10px;padding:4px 10px;display:inline-block;}
 .jump:active{background:#f9d7e2;}
 .search-input{width:100%;border:1.5px solid rgba(248,200,212,.8);border-radius:12px;padding:9px 12px;font-size:13px;background:#fffafc;outline:none;margin-bottom:10px;}
@@ -338,6 +339,14 @@ const SEARCH_URLS={
  '财经综合':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('黄金金价 '+k),
  '网络':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
 };
+/* 各平台 App 深链协议（装了 App 直接唤起搜索页） */
+const APP_SCHEMES={
+ '小红书':k=>'xhsdiscover://search/result?keyword='+encodeURIComponent(k),
+ '抖音':k=>'snssdk1128://search?keyword='+encodeURIComponent(k),
+ '微博':k=>'sinaweibo://searchall?q='+encodeURIComponent(k),
+ 'B站':k=>'bilibili://search?keyword='+encodeURIComponent(k),
+ '喜马拉雅':k=>'ximalaya://search?kw='+encodeURIComponent(k),
+};
 function jumpChips(src,kw){
   const mains=[src];
   if(src==='小红书')mains.push('抖音');
@@ -348,7 +357,27 @@ function jumpChips(src,kw){
   if(src==='网络')mains.push('百度');
   if(src==='财经综合')mains.push('必应');
   return '<div class="jump-row">'+[...new Set(mains)].map(p=>
-    `<a class="jump" href="${SEARCH_URLS[p](kw)}" target="_blank" rel="noopener">🔍${p}</a>`).join('')+'</div>';
+    `<button class="jump" data-p="${p}" data-k="${esc(kw)}">🔍${p}</button>`).join('')+'</div>';
+}
+/* 点击：先尝试唤起 App，1.2 秒内没离开页面则自动回退到网页版 */
+function doJump(p,k){
+  const web=SEARCH_URLS[p](k);
+  const scheme=(APP_SCHEMES[p]||(()=>null))(k);
+  let left=false;
+  const onHide=()=>{left=true;};
+  document.addEventListener('visibilitychange',onHide,{once:true});
+  if(scheme){
+    const t=Date.now();
+    window.location.href=scheme;
+    setTimeout(()=>{
+      document.removeEventListener('visibilitychange',onHide);
+      if(!document.hidden && Date.now()-t<2600 && !left){
+        window.location.href=web;
+      }
+    },1200);
+  }else{
+    window.open(web,'_blank');
+  }
 }
 
 /* ================= 治愈文案（随机） ================= */
@@ -753,6 +782,8 @@ function handleAction(btn){
 
 /* 其他交互：打卡按钮 / 搜索 / 分类 */
 document.addEventListener('click',e=>{
+  const j=e.target.closest('.jump');
+  if(j){e.preventDefault();doJump(j.dataset.p,j.dataset.k);return;}
   if(e.target.id==='checkinBtn'){
     const t=today();
     if(DB.checkin[t]){delete DB.checkin[t];toast('已撤回今日打卡');}

@@ -329,13 +329,13 @@ const SEARCH_URLS={
  '小红书':k=>'https://www.xiaohongshu.com/search_result?keyword='+encodeURIComponent(k),
  '抖音':k=>'https://www.douyin.com/search/'+encodeURIComponent(k),
  '微博':k=>'https://s.weibo.com/weibo?q='+encodeURIComponent(k),
- '苹果播客':k=>'https://podcasts.apple.com/search?term='+encodeURIComponent(k),
+ '苹果播客':k=>'https://podcasts.apple.com/cn/search?term='+encodeURIComponent(k),
  'B站':k=>'https://search.bilibili.com/all?keyword='+encodeURIComponent(k),
  '百度':k=>'https://www.baidu.com/s?wd='+encodeURIComponent(k),
  '必应':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
  '学习强国':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('学习强国 '+k),
  '申材有道':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('申材有道 '+k),
- '播客平台':k=>'https://podcasts.apple.com/search?term='+encodeURIComponent(k),
+ '播客平台':k=>'https://podcasts.apple.com/cn/search?term='+encodeURIComponent(k),
  '财经综合':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('黄金金价 '+k),
  '网络':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
 };
@@ -345,6 +345,7 @@ const APP_SCHEMES={
  '抖音':k=>'snssdk1128://search?keyword='+encodeURIComponent(k),
  '微博':k=>'sinaweibo://searchall?q='+encodeURIComponent(k),
  'B站':k=>'bilibili://search?keyword='+encodeURIComponent(k),
+ '苹果播客':k=>'pcast://search?term='+encodeURIComponent(k),
 };
 function jumpChips(src,kw){
   const mains=[src];
@@ -366,6 +367,14 @@ function openInSafari(url){
 function doJump(p,k){
   const web=SEARCH_URLS[p](k);
   const scheme=(APP_SCHEMES[p]||(()=>null))(k);
+  /* 苹果播客网页版不接受搜索参数：先复制关键词，进入后长按搜索框粘贴即可 */
+  if(p==='苹果播客'){
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(k);}
+      else{const ta=document.createElement('textarea');ta.value=k;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+      toast('已复制关键词，进入后长按搜索框粘贴 🎧');
+    }catch(e){}
+  }
   let left=false;
   const onHide=()=>{left=true;};
   document.addEventListener('visibilitychange',onHide,{once:true});

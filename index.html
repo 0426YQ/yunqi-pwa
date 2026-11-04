@@ -359,7 +359,12 @@ function jumpChips(src,kw){
   return '<div class="jump-row">'+[...new Set(mains)].map(p=>
     `<button class="jump" data-p="${p}" data-k="${esc(kw)}">🔍${p}</button>`).join('')+'</div>';
 }
-/* 点击：先尝试唤起 App，1.2 秒内没离开页面则自动回退到网页版 */
+/* 点击：PWA 内先尝试唤起 App；回退时用「新窗口」打开真 Safari（iOS 通用链接会自动跳进 App） */
+function openInSafari(url){
+  const a=document.createElement('a');
+  a.href=url;a.target='_blank';a.rel='noopener';
+  document.body.appendChild(a);a.click();a.remove();
+}
 function doJump(p,k){
   const web=SEARCH_URLS[p](k);
   const scheme=(APP_SCHEMES[p]||(()=>null))(k);
@@ -372,11 +377,11 @@ function doJump(p,k){
     setTimeout(()=>{
       document.removeEventListener('visibilitychange',onHide);
       if(!document.hidden && Date.now()-t<2600 && !left){
-        window.location.href=web;
+        openInSafari(web); // 新窗口=Safari，通用链接会尝试跳进 App
       }
     },1200);
   }else{
-    window.open(web,'_blank');
+    openInSafari(web);
   }
 }
 

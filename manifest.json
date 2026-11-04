@@ -1,0 +1,26 @@
+{
+  "name": "云琪工作台",
+  "short_name": "云琪工作台",
+  "description": "樱花粉治愈系个人工作台：计划、运动、记账、播客、学习、赚钱、存钱、黄金财经一体化",
+  "id": "/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf0f4",
+  "theme_color": "#f06a8a",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

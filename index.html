@@ -448,17 +448,70 @@ const GOLD_NEWS=[
  {title:'美元走势成为金价核心变量',desc:'美元偏弱时金价通常走强，关注汇率数据发布节奏。',src:'财经综合'},
  {title:'首饰金价与投资金价差异需留意',desc:'金饰品含工费溢价，投资保值优先看投资金条价格。',src:'财经综合'},
 ];
-const BASE_GOLD=612.5, BASE_GOLD_USD=76.8, BASE_SILVER=7.6;
+/* ================= 实时金价（新浪财经行情接口） ================= */
+const GOLD_CACHE_KEY='yunqi_gold_cache';
+let GOLD={
+  cny:'--',          // 沪金99 元/克
+  cnyChg:'0',
+  usd:'--',          // 伦敦金 美元/盎司
+  usdChg:'0',
+  silver:'--',       // 伦敦银 美元/盎司
+  silverCny:'--',    // 折合 元/克
+  time:'',           // 行情时间
+  ok:false,
+  updating:false,
+};
+try{const c=JSON.parse(localStorage.getItem(GOLD_CACHE_KEY)||'null');if(c)GOLD={...GOLD,...c};}catch(e){}
+function saveGoldCache(){localStorage.setItem(GOLD_CACHE_KEY,JSON.stringify(GOLD));}
+
+async function fetchGold(){
+  if(GOLD.updating)return;
+  GOLD.updating=true;
+  try{
+    const r=await fetch('https://hq.sinajs.cn/list=hf_XAU,hf_XAG,gds_AU9999',
+      {headers:{'Referer':'https://finance.sina.com.cn'},cache:'no-store'});
+    const buf=await r.arrayBuffer();
+    const txt=new TextDecoder('gbk').decode(buf);
+    const grab=code=>{const m=txt.match(new RegExp('hq_str_'+code+'="([^"]*)"'));return m?m[1].split(','):null;};
+    const xau=grab('hf_XAU'), xag=grab('hf_XAG'), au=grab('gds_AU9999');
+    // 伦敦金：0当前价 1买价 2卖价 ... 6时间 7昨收
+    if(xau&&xau[0]){
+      GOLD.usd=(+xau[0]).toFixed(2);
+      const prev=+xau[7]||+xau[0];
+      GOLD.usdChg=(((xau[0]-prev)/prev)*100).toFixed(2);
+      GOLD.time=xau[6]||'';
+    }
+    // 伦敦银：由沪金与伦敦金反推汇率，折算成 元/克
+    if(xag&&xag[0])GOLD.silver=(+xag[0]).toFixed(2);
+    if(au&&au[0]){
+      GOLD.cny=(+au[0]).toFixed(2);
+      const prev=+au[2]||+au[0];
+      GOLD.cnyChg=(((au[0]-prev)/prev)*100).toFixed(2);
+      if(au[6])GOLD.time=au[6];
+    }
+    if(GOLD.silver&&GOLD.usd&&GOLD.cny&&+GOLD.usd>0){
+      const usdCny=(+GOLD.cny)*31.1035/(+GOLD.usd);
+      GOLD.silverCny=((+GOLD.silver)/31.1035*usdCny).toFixed(2);
+    }
+    GOLD.ok=true;GOLD.date=new Date().toLocaleString('zh-CN',{hour12:false});
+    saveGoldCache();GOLD.updating=false;
+    if(current==='gold'||current==='home')render();
+    return true;
+  }catch(e){
+    GOLD.updating=false;
+    GOLD.err='行情获取失败，显示上次数据';
+    return false;
+  }
+}
+/* 兜底：无网络时用日期种子展示参考值 */
 function goldToday(){
-  const s=daySeed();
-  const wig=v=>(x=>x<5?-(5-x):(x-5))((s*7)%11)*0.9;
-  return {
-    cny:(BASE_GOLD+wig()).toFixed(2),
-    usd:(BASE_GOLD_USD+wig()/10).toFixed(2),
-    silver:(BASE_SILVER+wig()/10).toFixed(2),
-    chg:(((s%13)-5)/10).toFixed(2),
-    date:today(),
+  if(GOLD.ok)return{
+    cny:GOLD.cny,usd:GOLD.usd,silver:GOLD.silverCny,chg:GOLD.cnyChg,
+    date:GOLD.date||today(),live:true,time:GOLD.time,
   };
+  const s=daySeed();
+  return{cny:(612.5+((s*7)%11-5)*0.9).toFixed(2),usd:'--',silver:'--',chg:'0.00',
+    date:today(),live:false};
 }
 
 /* ================= 侧边导航 ================= */
@@ -740,15 +793,18 @@ function renderTalk(){
 function renderGold(){
   const g=goldToday();
   const up=parseFloat(g.chg)>=0;
+  const live=g.live;
+  const upd=live?(GOLD.date?GOLD.date.slice(5,16):g.date):'未联网·参考值';
   return `${moduleHeader(MODULES[11])}
-  <div class="card"><h2>📈 今日金价 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">更新于 ${g.date}</span></h2>
+  <div class="card"><h2>📈 实时金价 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${live?'🔴 实时':'⚪ 参考'} ${upd}</span></h2>
   <div class="stats">
-    ${statsCard('国内金价','¥'+g.cny,'/克')}
-    ${statsCard('国际金价','$'+g.usd,'/盎司')}
-    ${statsCard('今日涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
-    ${statsCard('白银参考','¥'+g.silver,'/克')}
+    ${statsCard('沪金 99','¥'+g.cny,'/克')}
+    ${statsCard('伦敦金','$'+g.usd,'/盎司')}
+    ${statsCard('沪金涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
+    ${statsCard('伦敦银','¥'+(g.silver==='--'?'--':g.silver),'/克')}
   </div>
-  <div class="hint" style="text-align:center;">💡 行情数据为参考示例，实际价格请以交易软件实时报价为准。</div></div>
+  <div class="form" style="margin-top:8px;"><button class="btn-main" data-a="refreshGold" style="flex:1;">🔄 刷新行情${GOLD.updating?' 获取中…':''}</button></div>
+  <div class="hint" style="text-align:center;">${live?`数据来源：新浪财经行情接口 · 行情时间 ${g.time||'--'} · 打开页面自动刷新`:'⚠️ 暂未获取到实时行情，显示的是参考值，点击上方按钮重试'}</div></div>
   <div class="card"><h2>📰 财经简要资讯</h2>
   ${pick(GOLD_NEWS,4).map(it=>`<div class="info-item"><div class="i-title">${it.title}</div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}</div>
   <div class="card"><h2>🌷 一句话解读</h2>
@@ -797,6 +853,7 @@ function handleAction(btn){
     case 'sync/pushNow':pushCloud();break;
     case 'sync/pullNow':pullCloud();break;
     case 'sync/clearLog':SYNC_LOG=[];localStorage.setItem('yunqi_sync_log','[]');render();break;
+    case 'gold/refreshGold':toast('正在获取实时行情…');fetchGold().then(ok=>{if(!ok)toast('获取失败，请检查网络');});break;
     case 'pod/shuffle':SHUFFLE.pod++;render();break;
     case 'hot/shuffle':SHUFFLE.hot++;render();break;
     case 'ai/shuffle':SHUFFLE.ai++;render();break;
@@ -850,6 +907,10 @@ setInterval(()=>{
 /* 启动：渲染 + 开机自动拉取云端 */
 render();
 if(syncReady()){pullCloud(true);}
+/* 实时金价：开机拉取 + 每 60 秒刷新一次 */
+fetchGold();
+setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
 
 /* PWA：注册 Service Worker（离线可用 + 可添加到主屏） */
 if('serviceWorker' in navigator){

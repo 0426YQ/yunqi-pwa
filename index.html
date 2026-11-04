@@ -329,13 +329,13 @@ const SEARCH_URLS={
  '小红书':k=>'https://www.xiaohongshu.com/search_result?keyword='+encodeURIComponent(k),
  '抖音':k=>'https://www.douyin.com/search/'+encodeURIComponent(k),
  '微博':k=>'https://s.weibo.com/weibo?q='+encodeURIComponent(k),
- '喜马拉雅':k=>'https://www.ximalaya.com/search?kw='+encodeURIComponent(k),
+ '苹果播客':k=>'https://podcasts.apple.com/search?term='+encodeURIComponent(k),
  'B站':k=>'https://search.bilibili.com/all?keyword='+encodeURIComponent(k),
  '百度':k=>'https://www.baidu.com/s?wd='+encodeURIComponent(k),
  '必应':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
  '学习强国':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('学习强国 '+k),
  '申材有道':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('申材有道 '+k),
- '播客平台':k=>'https://www.ximalaya.com/search?kw='+encodeURIComponent(k),
+ '播客平台':k=>'https://podcasts.apple.com/search?term='+encodeURIComponent(k),
  '财经综合':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('黄金金价 '+k),
  '网络':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
 };
@@ -345,15 +345,13 @@ const APP_SCHEMES={
  '抖音':k=>'snssdk1128://search?keyword='+encodeURIComponent(k),
  '微博':k=>'sinaweibo://searchall?q='+encodeURIComponent(k),
  'B站':k=>'bilibili://search?keyword='+encodeURIComponent(k),
- '喜马拉雅':k=>'ximalaya://search?kw='+encodeURIComponent(k),
 };
 function jumpChips(src,kw){
   const mains=[src];
   if(src==='小红书')mains.push('抖音');
   if(src==='抖音')mains.push('小红书');
   if(src==='微博')mains.push('百度');
-  if(src==='播客平台')mains.push('B站');
-  if(src==='学习强国'||src==='申材有道')mains.push('必应');
+  if(src==='播客平台')mains.push('B站');  if(src==='学习强国'||src==='申材有道')mains.push('必应');
   if(src==='网络')mains.push('百度');
   if(src==='财经综合')mains.push('必应');
   return '<div class="jump-row">'+[...new Set(mains)].map(p=>
@@ -401,7 +399,9 @@ const QUOTES=[
 
 /* ================= 联网内容（每日种子 + 内置清单） ================= */
 function daySeed(){let s=0,d=today();for(const c of d)s=(s*31+c.charCodeAt(0))%99991;return s;}
-function pick(arr,n){const s=daySeed();const a=[...arr];const out=[];let x=s;while(out.length<Math.min(n,a.length)){x=(x*9301+49297)%233280;const i=x%a.length;out.push(a.splice(i,1)[0]);}return out;}
+function pick(arr,n,extra){const s=daySeed()+(extra||0)*7919;const a=[...arr];const out=[];let x=s;while(out.length<Math.min(n,a.length)){x=(x*9301+49297)%233280;const i=x%a.length;out.push(a.splice(i,1)[0]);}return out;}
+/* 换一批计数器（每个联网板块独立） */
+const SHUFFLE={pod:0,hot:0,ai:0};
 const POD_TOPICS=[
  {cat:'赚钱搞钱',title:'普通人副业冷启动：从 0 到第一笔收入',desc:'聊一聊下班后的 2 小时如何变成现金流，适合晨间听思路。',src:'小红书'},
  {cat:'赚钱搞钱',title:'信息差变现：身边的生意为什么有人闷声赚',desc:'拆解三个低门槛信息差案例，听完记下你能复刻的一个。',src:'播客平台'},
@@ -585,11 +585,12 @@ function renderFinance(){
 
 /* ---- 晨间播客 ---- */
 function renderPod(){
-  const items=pick(POD_TOPICS,6);
+  const items=pick(POD_TOPICS,6,SHUFFLE.pod);
   return `${moduleHeader(MODULES[4])}
   <div class="card"><h2>🎙️ 今日晨间选题 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
   ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
-  <div class="hint">覆盖：赚钱搞钱 · 考公考编 · 写小说素材 · 全网热点 · 历史 · 英语，每天打开都会换一批新选题。点🔍按钮可跳转到对应 App 或网页搜索。</div></div>`;
+  <div class="hint">覆盖：赚钱搞钱 · 考公考编 · 写小说素材 · 全网热点 · 历史 · 英语。点🔍按钮可跳转到对应 App 或网页搜索。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
 }
 
 /* ---- 每日学习 ---- */
@@ -622,21 +623,23 @@ function renderStudy(){
 
 /* ---- 热点话题 ---- */
 function renderHot(){
-  const items=pick(HOT_ITEMS,5);
+  const items=pick(HOT_ITEMS,5,SHUFFLE.hot);
   const cats=['全部',...new Set(HOT_ITEMS.map(i=>i.cat))];
   return `${moduleHeader(MODULES[6])}
   <div class="card"><h2>🔥 每日热点素材 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
   ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
-  <div class="hint">来源覆盖：申材有道 · 抖音 · 小红书 · 学习强国。按话题分类整理，点🔍按钮跳转查看完整内容。</div></div>`;
+  <div class="hint">来源覆盖：申材有道 · 抖音 · 小红书 · 学习强国。按话题分类整理，点🔍按钮跳转查看完整内容。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
 }
 
 /* ---- AI 爆品 ---- */
 function renderAI(){
-  const items=pick(AI_ITEMS,5);
+  const items=pick(AI_ITEMS,5,SHUFFLE.ai);
   return `${moduleHeader(MODULES[7])}
   <div class="card"><h2>✨ 今日 AI 爆品清单 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
   ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
-  <div class="hint">板块内容：AI 爆款工具 · AI 玩法 · 流量爆品思路 · 可落地变现项目。点🔍按钮跳转搜索实操案例。</div></div>`;
+  <div class="hint">板块内容：AI 爆款工具 · AI 玩法 · 流量爆品思路 · 可落地变现项目。点🔍按钮跳转搜索实操案例。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
 }
 
 /* ---- 赚钱 ---- */
@@ -782,6 +785,9 @@ function handleAction(btn){
     case 'sync/pushNow':pushCloud();break;
     case 'sync/pullNow':pullCloud();break;
     case 'sync/clearLog':SYNC_LOG=[];localStorage.setItem('yunqi_sync_log','[]');render();break;
+    case 'pod/shuffle':SHUFFLE.pod++;render();break;
+    case 'hot/shuffle':SHUFFLE.hot++;render();break;
+    case 'ai/shuffle':SHUFFLE.ai++;render();break;
   }
 }
 

@@ -1,5 +1,5 @@
 /* 云琪工作台 Service Worker：缓存优先，联网更新 */
-const CACHE = 'yunqi-pwa-github-v3';
+const CACHE = 'yunqi-pwa-github-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

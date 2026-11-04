@@ -560,7 +560,7 @@ function renderHome(){
       ${statsCard('💸 今日收益','¥'+fmtN(got))}
       ${statsCard('🪙 今日存入','¥'+fmtN(saved))}
       ${statsCard('🔥 连续打卡',streak,'天')}
-      ${statsCard('📈 金价','¥'+g.cny+'/克')}
+      ${statsCard('📈 沪金'+(g.live?'(实时)':''),'¥'+g.cny+'/克')}
     </div>
     <div class="hint">点击下方卡片进入对应栏目，查看详情与录入。</div>
     <div class="nav-grid" style="margin-top:12px;">
@@ -912,9 +912,31 @@ fetchGold();
 setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
 
-/* PWA：注册 Service Worker（离线可用 + 可添加到主屏） */
+/* PWA：注册 Service Worker（离线可用 + 可添加到主屏），并自动检测更新 */
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
+    reg.update();
+    setInterval(()=>reg.update(),30*60*1000);
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      if(!nw)return;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed'&&navigator.serviceWorker.controller){
+          nw.postMessage('SKIP_WAITING');
+          toast('🌸 已更新到最新版本');
+          setTimeout(()=>location.reload(),800);
+        }
+      });
+    });
+  }).catch(()=>{});
+  window.addEventListener('load',()=>{
+    const cur=DB._ver||'';
+    const V='v10';
+    if(cur!==V){
+      DB._ver=V;save();
+      if(cur&&navigator.onLine)setTimeout(()=>location.reload(),300);
+    }
+  });
 }
 </script>
 </body>

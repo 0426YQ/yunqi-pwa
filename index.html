@@ -175,6 +175,10 @@ header{text-align:center;padding:6px 0 4px;}
 .info-item .i-title{font-size:13px;font-weight:700;color:var(--text-dark);}
 .info-item .i-desc{font-size:12px;color:#a97b8a;margin-top:3px;line-height:1.5;}
 .info-item .i-src{font-size:10px;color:#b9a0aa;margin-top:5px;}
+.jump-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.jump{background:#fdeef3;color:#e88ca4;font-size:11px;font-weight:600;text-decoration:none;
+  border-radius:10px;padding:4px 10px;display:inline-block;}
+.jump:active{background:#f9d7e2;}
 .search-input{width:100%;border:1.5px solid rgba(248,200,212,.8);border-radius:12px;padding:9px 12px;font-size:13px;background:#fffafc;outline:none;margin-bottom:10px;}
 .empty{text-align:center;color:#d3a8b5;font-size:12px;padding:14px 0;}
 .toast{
@@ -317,6 +321,34 @@ function renderSync(){
     ${SYNC_LOG.length?SYNC_LOG.map(l=>`<div class="row"><div class="grow"><div class="t-main" style="font-weight:400;">${l.msg}</div><div class="t-sub">${l.time}</div></div></div>`).join(''):'<div class="empty">暂无同步记录</div>'}
   </div>
   <div class="add-row"><button class="add-btn" data-a="clearLog">清空日志</button></div></div>`;
+}
+
+/* ================= 跳转其他 App（平台搜索深链） ================= */
+const SEARCH_URLS={
+ '小红书':k=>'https://www.xiaohongshu.com/search_result?keyword='+encodeURIComponent(k),
+ '抖音':k=>'https://www.douyin.com/search/'+encodeURIComponent(k),
+ '微博':k=>'https://s.weibo.com/weibo?q='+encodeURIComponent(k),
+ '喜马拉雅':k=>'https://www.ximalaya.com/search?kw='+encodeURIComponent(k),
+ 'B站':k=>'https://search.bilibili.com/all?keyword='+encodeURIComponent(k),
+ '百度':k=>'https://www.baidu.com/s?wd='+encodeURIComponent(k),
+ '必应':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
+ '学习强国':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('学习强国 '+k),
+ '申材有道':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('申材有道 '+k),
+ '播客平台':k=>'https://www.ximalaya.com/search?kw='+encodeURIComponent(k),
+ '财经综合':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('黄金金价 '+k),
+ '网络':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
+};
+function jumpChips(src,kw){
+  const mains=[src];
+  if(src==='小红书')mains.push('抖音');
+  if(src==='抖音')mains.push('小红书');
+  if(src==='微博')mains.push('百度');
+  if(src==='播客平台')mains.push('B站');
+  if(src==='学习强国'||src==='申材有道')mains.push('必应');
+  if(src==='网络')mains.push('百度');
+  if(src==='财经综合')mains.push('必应');
+  return '<div class="jump-row">'+[...new Set(mains)].map(p=>
+    `<a class="jump" href="${SEARCH_URLS[p](kw)}" target="_blank" rel="noopener">🔍${p}</a>`).join('')+'</div>';
 }
 
 /* ================= 治愈文案（随机） ================= */
@@ -522,8 +554,8 @@ function renderPod(){
   const items=pick(POD_TOPICS,6);
   return `${moduleHeader(MODULES[4])}
   <div class="card"><h2>🎙️ 今日晨间选题 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
-  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}
-  <div class="hint">覆盖：赚钱搞钱 · 考公考编 · 写小说素材 · 全网热点 · 历史 · 英语，每天打开都会换一批新选题。</div></div>`;
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">覆盖：赚钱搞钱 · 考公考编 · 写小说素材 · 全网热点 · 历史 · 英语，每天打开都会换一批新选题。点🔍按钮可跳转到对应 App 或网页搜索。</div></div>`;
 }
 
 /* ---- 每日学习 ---- */
@@ -560,8 +592,8 @@ function renderHot(){
   const cats=['全部',...new Set(HOT_ITEMS.map(i=>i.cat))];
   return `${moduleHeader(MODULES[6])}
   <div class="card"><h2>🔥 每日热点素材 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
-  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}
-  <div class="hint">来源覆盖：申材有道 · 抖音 · 小红书 · 学习强国。按话题分类整理，适合积累、写作与答题。</div></div>`;
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">来源覆盖：申材有道 · 抖音 · 小红书 · 学习强国。按话题分类整理，点🔍按钮跳转查看完整内容。</div></div>`;
 }
 
 /* ---- AI 爆品 ---- */
@@ -569,8 +601,8 @@ function renderAI(){
   const items=pick(AI_ITEMS,5);
   return `${moduleHeader(MODULES[7])}
   <div class="card"><h2>✨ 今日 AI 爆品清单 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
-  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}
-  <div class="hint">板块内容：AI 爆款工具 · AI 玩法 · 流量爆品思路 · 可落地变现项目。</div></div>`;
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">板块内容：AI 爆款工具 · AI 玩法 · 流量爆品思路 · 可落地变现项目。点🔍按钮跳转搜索实操案例。</div></div>`;
 }
 
 /* ---- 赚钱 ---- */

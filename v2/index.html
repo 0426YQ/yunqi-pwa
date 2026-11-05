@@ -201,6 +201,9 @@ header{text-align:center;padding:6px 0 4px;}
 .hist-item .h-body{font-size:12px;color:#a97b8a;margin-top:6px;line-height:1.8;}
 .hist-item .h-body .done{color:#4caf7d;}
 .hist-item .h-body .undone{color:#c2899a;}
+.mini-btn{font-size:11px;padding:4px 10px;border-radius:10px;background:#fff;color:#c2899a;
+  border:1px solid rgba(248,200,212,.9);cursor:pointer;font-family:inherit;}
+.mini-btn:active{background:#fdeef3;}
 /* 记账：金额大输入 + 分类网格 */
 .amt-box{display:flex;align-items:center;gap:6px;background:#fffafc;border:1.5px solid rgba(248,200,212,.85);
   border-radius:16px;padding:12px 16px;margin-bottom:12px;}
@@ -1271,53 +1274,235 @@ function renderSave(){
 
 /* ---- 情商话术 ---- */
 const PHRASE_SEED=[
- {cat:'职场',q:'领导安排超出职责的任务时',a:'好的领导，我先梳理下手头优先级，确认下时间节点，保证高质量交付。'},
+/* ===== 职场 ===== */
  {cat:'职场',q:'汇报进展时的万能句式',a:'目前完成了 X，正在进行 Y，预计 Z 时间交付，有一个小风险我建议这样处理…'},
+ {cat:'职场',q:'领导安排超出职责的任务时',a:'好的领导，我先梳理下手头优先级，确认下时间节点，保证高质量交付。'},
  {cat:'职场',q:'被当众批评如何体面回应',a:'谢谢您指出来，这块我确实考虑不够周全，我马上调整，今天下班前同步您改进结果。'},
- {cat:'人情往来',q:'收到礼物时的回应',a:'太懂我了！收到特别喜欢，改天请你吃饭，这份心意我记下啦。'},
- {cat:'人情往来',q:'婉拒帮忙但不伤感情',a:'我最近手头这个项目正在冲刺，实在腾不出精力，怕耽误你，帮你问问有没有合适的人？'},
- {cat:'拒绝话术',q:'拒绝借钱',a:'不好意思，我的钱都在定期和理财里，动不了。你要是急用，我帮你想想别的办法。'},
- {cat:'拒绝话术',q:'拒绝无效社交邀约',a:'最近在闭关赶进度，等我忙完这阵，一定专门约你好好聚！'},
- {cat:'高情商回复',q:'别人自嘲时的高情商接话',a:'哪有呀，你这是凡尔赛，我可是很羡慕这个能力的。'},
- {cat:'高情商回复',q:'被夸奖时的回应',a:'谢谢！是你带得好/环境好，跟你合作我也学到很多。'},
- {cat:'高情商回复',q:'别人吐槽时先接情绪',a:'确实挺让人无语的，换成我我也会生气，你已经处理得很冷静了。'},
  {cat:'职场',q:'提出不同意见时',a:'我理解你的思路，我这边有个补充角度，供你参考，最终你定。'},
  {cat:'职场',q:'同事甩锅时',a:'这块当时的分工记录我这边有一份，我们一起对一下时间线，看是哪一环卡住了。'},
  {cat:'职场',q:'请求资源支持',a:'这个事要做到预期效果，需要 A 和 B 两个支持，我可以先出方案，您看能不能帮忙推动？'},
  {cat:'职场',q:'离职时体面表达',a:'很感谢这段经历带给我的成长，我会把手头工作整理成文档交接清楚，保证不影响团队节奏。'},
+ {cat:'职场',q:'面试被问离职原因',a:'上一段经历让我在 X 上成长很快，但我更想在 Y 方向深耕，贵司正好是这个方向，所以来了。'},
+ {cat:'职场',q:'面试谈薪资',a:'结合我目前的经验和市场水平，我的期望是 X 到 Y，具体可以看岗位的整体职责和成长空间。'},
+ {cat:'职场',q:'入职第一天自我介绍',a:'大家好，我是 XX，负责 XX 方向，之前在 XX 做过类似的事，以后多向大家学习，有需要随时叫我。'},
+ {cat:'职场',q:'被安排做不属于自己的活',a:'这个我可以接，不过想跟您确认下优先级——是排在 A 前面，还是 A 先交付我再做？'},
+ {cat:'职场',q:'工作出现失误如何汇报',a:'有个情况我第一时间跟您同步：问题是 X，影响范围是 Y，我已经做了 A 和 B 止损，还需要您帮忙 C。'},
+ {cat:'职场',q:'催同事交付',a:'方便问下这个进度到哪一步了吗？我这边要在周五前汇总，需要提前留出对接时间，有卡点随时找我。'},
+ {cat:'职场',q:'拒绝同事临时甩来的活',a:'我手上这个今天必须交，实在腾不出手。要不你先按模板做，我明早帮你过一遍？'},
+ {cat:'职场',q:'跟领导要反馈',a:'这次方案我想再优化一下，您方便的时候能不能给我两句建议，哪块最该改？'},
+ {cat:'职场',q:'周报开场写法',a:'本周重点推进 3 件事：A 已完成、B 已到 70%、C 遇到 X 卡点需要协调。'},
+ {cat:'职场',q:'被夸奖时别只会说"没有没有"',a:'谢谢领导认可，这次能成主要是团队配合得好，我这边把复盘整理一下，下次可以复用。'},
+ {cat:'职场',q:'向上管理：让领导做选择题',a:'关于这个问题我准备了两个方案：A 快但成本高，B 稳但要多三天，我倾向 B，您看？'},
+ {cat:'职场',q:'跨部门协作被推诿',a:'理解你们也忙，那我们把接口对齐一下——我负责 X，你们负责 Y，周五前互相同步一次，可以吗？'},
+ {cat:'职场',q:'被问"你怎么看"时的缓冲',a:'我先说我的初步判断，可能不全面：一是…二是…具体还要看数据，我回去再核一下给您结论。'},
+ {cat:'职场',q:'面对不合理 KPI',a:'这个目标我接，但想跟您对齐一下资源：按现在的投入，完成 X 需要 Y 支持，不然容易达不到预期。'},
+ {cat:'职场',q:'请假的得体说法',a:'我家里有点事需要处理，X 号想请一天假，手头工作我提前跟 XX 交接好，紧急的事我会随时在线。'},
+ {cat:'职场',q:'新人请教问题的开场',a:'打扰一下，这个点我卡了半小时了，自己查过 A 和 B，还是不太确定，能不能占用您三分钟？'},
+ {cat:'职场',q:'被同事打听工资',a:'公司不太让聊这个哈哈，反正够花，你呢最近忙不忙？'},
+ {cat:'职场',q:'领导画饼时的回应',a:'谢谢领导信任，我更关心的是这个阶段我能做出什么结果，具体目标我们可以定个里程碑。'},
+
+/* ===== 生活 ===== */
+ {cat:'生活',q:'朋友深夜找你倾诉',a:'我在呢，你慢慢说，不着急。想听建议还是就想有人陪着？我都行。'},
+ {cat:'生活',q:'安慰失恋的朋友',a:'难受是正常的，别急着好起来。这几天我陪你，想骂就骂，想哭就哭。'},
+ {cat:'生活',q:'被问"你怎么还单身"',a:'缘分这事急不来，我先把日子过明白。倒是您最近有什么开心事？'},
+ {cat:'生活',q:'和家人意见不合',a:'我知道你们是为我好，这个我会认真考虑。不过这件事我想按自己的想法试一次，不行我再回来听你们的。'},
+ {cat:'生活',q:'跟伴侣吵架后的破冰',a:'我刚才情绪上头了，话说重了，对不起。我不是想赢你，我是想跟你把这事说清楚。'},
+ {cat:'生活',q:'表达不满但不伤人',a:'刚那件事让我有点不舒服，我说说我的感受，你听听就好，不是怪你。'},
+ {cat:'生活',q:'向人道歉的正确姿势',a:'这件事是我做得不对，我明白你为什么会生气。我打算这样补救，你看看行不行。'},
+ {cat:'生活',q:'拒绝父母安排的相亲',a:'我知道你们着急，这个我记着了。但我想自己先遇，真遇不到再请你们帮忙，行吗？'},
+ {cat:'生活',q:'夸奖别人不显假',a:'你刚才那个处理方式我学到了，换我肯定想不到，真的很厉害。'},
+ {cat:'生活',q:'被朋友放鸽子',a:'没事，你先忙你的。下次提前说一声就行，我这边好安排时间。'},
+ {cat:'生活',q:'室友生活习惯冲突',a:'有个小事想跟你商量下，晚上十一点后能不能轻一点？我第二天要早起，麻烦你啦。'},
+ {cat:'生活',q:'带孩子情绪失控后',a:'妈妈刚才吼你了，是妈妈没控制好情绪，对不起。但那个行为确实不可以，我们说说为什么。'},
+ {cat:'生活',q:'朋友炫耀时如何回应',a:'真替你高兴！这个我也挺想了解的，你是怎么做到的？'},
+ {cat:'生活',q:'被介绍对象不想见',a:'谢谢阿姨想着我，这段时间我确实排满了。要不先加个微信聊聊？合适再说见面的事。'},
+ {cat:'生活',q:'感谢别人帮忙',a:'这次真的多亏你，要不是你我都不知道怎么收场。这份情我记着，之后有事你说话。'},
+ {cat:'生活',q:'邻居噪音扰民',a:'不好意思打扰一下，晚上孩子练琴的声音有点传过来，能不能把时间调到八点前？谢谢啦。'},
+ {cat:'生活',q:'和长辈观念冲突',a:'您说的这个道理我懂，时代确实变了些。我们各退一步，我按我的方式试，您帮我看着点。'},
+ {cat:'生活',q:'朋友借钱不还怎么开口',a:'最近我这边有一笔支出要凑，之前那笔方便这两天转我吗？不方便的话我们商量个时间。'},
+ {cat:'生活',q:'被追问"什么时候要孩子"',a:'顺其自然呢，有了肯定第一时间告诉您。您最近身体怎么样？'},
+ {cat:'生活',q:'情绪低落时求助',a:'我这两天状态不太好，能不能陪我聊会儿？不用给建议，听我说说就行。'},
+
+/* ===== 人情往来 ===== */
+ {cat:'人情往来',q:'收到礼物时的回应',a:'太懂我了！收到特别喜欢，改天请你吃饭，这份心意我记下啦。'},
  {cat:'人情往来',q:'朋友请客后想回报',a:'这次让你破费啦，下次我做东，正好有家店想带你去尝尝。'},
  {cat:'人情往来',q:'亲戚打听收入',a:'够花够用，勉强糊口啦，倒是您最近身体怎么样？'},
  {cat:'人情往来',q:'朋友情绪低落时',a:'我不太会说漂亮话，但你随时可以找我，我陪你待着也行。'},
+ {cat:'人情往来',q:'随礼被嫌少',a:'我按自己的心意来的，能力有限，希望你别介意。祝福是真心的。'},
+ {cat:'人情往来',q:'被要求帮忙走后门',a:'这事我真帮不上，不是不帮你，是规则卡得死，我硬来反而害了你。别的忙你尽管开口。'},
+ {cat:'人情往来',q:'同事结婚要不要随礼',a:'（关系一般）听说你要结婚啦，恭喜恭喜！我那天有事可能到不了，心意到了，祝你们幸福。'},
+ {cat:'人情往来',q:'被送贵重礼物想回绝',a:'这个太贵重了，我收着心里不安。你的心意我领了，要不换个小的，我肯定收。'},
+ {cat:'人情往来',q:'过年被催婚',a:'在努力呢，工作太忙了。来，先敬您一杯，新年快乐！'},
+ {cat:'人情往来',q:'请人帮忙的开场',a:'有件事想麻烦你，你要是没空我完全理解，先跟你说下情况你看方便不？'},
+ {cat:'人情往来',q:'帮忙后对方道谢',a:'小事，别放在心上。以后我有事也指望你呢，互相的。'},
+ {cat:'人情往来',q:'被人情绑架时',a:'我知道你是好意，但这件事我确实做不到。我宁愿现在说清楚，也不想答应了做不到。'},
+ {cat:'人情往来',q:'第一次见家长',a:'阿姨您好，常听 XX 提起您。今天来得急，带了点小心意，您别嫌弃。'},
+ {cat:'人情往来',q:'朋友家做客的分寸',a:'菜太好吃了，我能帮什么忙？洗碗我来吧，你歇着。'},
+ {cat:'人情往来',q:'同事请喝奶茶不想欠人情',a:'谢谢！下次我请，正好想试试那家新的。'},
+ {cat:'人情往来',q:'婉拒参加不熟的人婚礼',a:'恭喜你们！那天我实在走不开，礼我会让人带过去，祝新婚快乐。'},
+ {cat:'人情往来',q:'被朋友当免费劳动力',a:'这次我帮你弄，但下次这类事你得自己上手了，我教你怎么做，很快的。'},
+ {cat:'人情往来',q:'长辈唠叨时',a:'嗯嗯，您说的我记着了。（认真听 + 不反驳 + 转移话题）您刚才说的那个菜怎么做来着？'},
+
+/* ===== 拒绝话术 ===== */
+ {cat:'拒绝话术',q:'拒绝借钱',a:'不好意思，我的钱都在定期和理财里，动不了。你要是急用，我帮你想想别的办法。'},
+ {cat:'拒绝话术',q:'拒绝无效社交邀约',a:'最近在闭关赶进度，等我忙完这阵，一定专门约你好好聚！'},
  {cat:'拒绝话术',q:'拒绝加班',a:'今天有个早就约好的家庭安排，实在走不开。这部分我明早提前到岗补上，保证不耽误进度。'},
  {cat:'拒绝话术',q:'拒绝推销',a:'谢谢您，我这边暂时确实不需要，有需要我再联系您。'},
  {cat:'拒绝话术',q:'拒绝不合理要求',a:'这个我没法答应你，但我可以帮你想想还有哪些办法，我们一起看看。'},
+ {cat:'拒绝话术',q:'婉拒帮忙但不伤感情',a:'我最近手头这个项目正在冲刺，实在腾不出精力，怕耽误你，帮你问问有没有合适的人？'},
+ {cat:'拒绝话术',q:'拒绝代购/带货',a:'我不太懂这块，怕给你买错了反而麻烦。要不我把链接发你，你自己挑更放心。'},
+ {cat:'拒绝话术',q:'拒绝免费咨询',a:'这个问题挺专业的，一两句说不清。如果是正式项目，我们可以走个流程聊；闲聊的话我怕给你说错。'},
+ {cat:'拒绝话术',q:'拒绝朋友的朋友加微信',a:'我微信基本只用于工作，加了也经常回不了消息，别耽误你。有事你直接让 XX 转达给我就行。'},
+ {cat:'拒绝话术',q:'拒绝被安排相亲',a:'谢谢你们操心，但感情这事我想自己决定节奏。这次就先不了，别让人家白等。'},
+ {cat:'拒绝话术',q:'拒绝当和事佬',a:'你们俩的事我不太好插手，我说什么都不合适。但我可以听你们各自说说。'},
+ {cat:'拒绝话术',q:'拒绝降薪/画饼',a:'我理解公司的难处，但我的实际付出和这个数字差得比较多。我们可以聊聊具体的调整方案吗？'},
+ {cat:'拒绝话术',q:'拒绝喝酒',a:'我今天开车来的/在吃药，真不能喝。我以茶代酒敬您一杯，心意一样的。'},
+ {cat:'拒绝话术',q:'拒绝加班群@所有人',a:'收到，我这边明早第一时间处理，今晚实在不方便，先说明一下免得耽误大家。'},
+ {cat:'拒绝话术',q:'拒绝被借车/借贵重物品',a:'车我自己也要用，而且保险只保我自己开，真出事了理赔很麻烦。要不我帮你叫个车？'},
+ {cat:'拒绝话术',q:'拒绝转介绍工作',a:'我这边暂时没有合适的岗位，直接推给 HR 反而会让你等很久。有消息我第一时间告诉你。'},
+
+/* ===== 高情商回复 ===== */
+ {cat:'高情商回复',q:'别人自嘲时的高情商接话',a:'哪有呀，你这是凡尔赛，我可是很羡慕这个能力的。'},
+ {cat:'高情商回复',q:'被夸奖时的回应',a:'谢谢！是你带得好/环境好，跟你合作我也学到很多。'},
+ {cat:'高情商回复',q:'别人吐槽时先接情绪',a:'确实挺让人无语的，换成我我也会生气，你已经处理得很冷静了。'},
  {cat:'高情商回复',q:'别人道歉时',a:'谢谢你能这么说，我心里舒服多了，这事我们翻篇。'},
  {cat:'高情商回复',q:'被追问隐私',a:'这个说来话长哈哈，改天有空慢慢聊，先说说你最近怎么样？'},
  {cat:'高情商回复',q:'化解尴尬冷场',a:'（笑）我们刚刚是不是同时在想下一句说什么？来，我先说。'},
+ {cat:'高情商回复',q:'被比较时',a:'各有各的好，他那个我学不来，我这个他也未必喜欢。'},
+ {cat:'高情商回复',q:'对方情绪激动时',a:'你先说，我不打断，等你说完我再说我的想法。'},
+ {cat:'高情商回复',q:'被误解时',a:'可能我表达得不够清楚，让你误会了，我重新说一下我的意思。'},
+ {cat:'高情商回复',q:'听到八卦时',a:'这个我不太清楚，也不好乱说。要不我们聊点别的？'},
+ {cat:'高情商回复',q:'别人哭的时候',a:'不用憋着，想哭就哭，我在这。'},
+ {cat:'高情商回复',q:'对方说"随便"时',a:'那我替你做决定啦，不好吃你负责夸我。'},
+ {cat:'高情商回复',q:'被拒绝时',a:'理解的，谢谢你直接告诉我，省得我瞎猜。以后有机会再合作。'},
+ {cat:'高情商回复',q:'别人炫耀孩子',a:'这孩子眼睛真亮，一看就机灵。你平时怎么带的？'},
+ {cat:'高情商回复',q:'被当面指出缺点',a:'你说得对，这个我自己也感觉到了。你观察得挺细的，我改改看。'},
+ {cat:'高情商回复',q:'对方迟到很久',a:'到了就好，路上辛苦吧？我先把菜点了，你看看还想吃什么。'},
+ {cat:'高情商回复',q:'同事抱怨领导',a:'（不接话）确实挺难的。你最近手上活多吗？'},
+ {cat:'高情商回复',q:'被人当众开玩笑下不来台',a:'（笑着说）这个梗我记下了，下次轮到我说你。'},
+ {cat:'高情商回复',q:'对方说"我说话直你别介意"',a:'没事，你说，我听着。（心里留一道防线，不必全盘接收）'},
+ {cat:'高情商回复',q:'结束不想继续的对话',a:'跟你聊得挺开心的，我这边得去忙了，回头再聊！'},
 ];
+function phrasePool(){
+  if(!DB.phrases||!DB.phrases.length)DB.phrases=[...PHRASE_SEED];
+  return DB.phrases;
+}
+/* 今日推荐：按日期种子抽 6 条 + 支持"换一批"；在线话术优先混入 */
 function renderTalk(){
-  if(!DB.phrases.length)DB.phrases=[...PHRASE_SEED];
-  const kw=(renderTalk._kw||'').toLowerCase();
-  const cats=['全部','职场','人情往来','拒绝话术','高情商回复'];
+  const pool=phrasePool();
+  const kw=(renderTalk._kw||'').toLowerCase().trim();
+  const cats=['全部','职场','生活','人情往来','拒绝话术','高情商回复'];
   const cur=renderTalk._cat||'全部';
-  const list=DB.phrases.filter(p=>(cur==='全部'||p.cat===cur)&&(!kw||p.q.toLowerCase().includes(kw)||p.a.toLowerCase().includes(kw)));
-  // 今日推荐：按日期+轮换批次抽取 3 条，每天自动换
+  const list=pool.filter(p=>(cur==='全部'||p.cat===cur)&&(!kw||(p.q||'').toLowerCase().includes(kw)||(p.a||'').toLowerCase().includes(kw)));
+
+  // 6 条今日推荐：先按日期+批次洗牌，再交叉分类取 6 条
   const batch=DB.talkBatch||0;
-  const todayPicks=pick(DB.phrases,3,(daySeed()%97)+batch*13);
+  const seed=(daySeed()%9973)+batch*131;
+  const shuffled=pool.map((p,idx)=>({p,k:((idx*2654435761+seed)>>>0)%100003})).sort((a,b)=>a.k-b.k).map(x=>x.p);
+  const seen=new Set();const picks=[];
+  // 第一轮：每个分类最多取 2 条，保证多样性
+  const perCat={};
+  for(const p of shuffled){
+    if(picks.length>=6)break;
+    const c=p.cat||'其他';perCat[c]=perCat[c]||0;
+    if(perCat[c]>=2)continue;
+    perCat[c]++; picks.push(p);
+  }
+  // 不够 6 条再补
+  for(const p of shuffled){ if(picks.length>=6)break; if(!picks.includes(p))picks.push(p); }
+
+  const online=DB.talkOnline||null;
+  const netStatus=renderTalk._netFetching?'获取中…':(online?(online.at?('已更新 '+online.at):'已更新'):'本地精选');
+
   return `${moduleHeader(MODULES[10])}
-  <div class="card"><h2>🌟 今日推荐话术 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动更新</span></h2>
-  ${todayPicks.map(p=>`<div class="info-item"><div><span class="tag">${p.cat}</span><span class="i-title">${esc(p.q)}</span></div><div class="i-desc">${esc(p.a)}</div></div>`).join('')}
-  <div class="add-row"><button class="add-btn" data-a="talkShuffle">🔄 换一批</button></div>
-  <div class="hint">每天自动更换一批，看到喜欢的可以点下方「加入我的话术库」收进常用。</div></div>
-  <div class="card"><h2>💬 话术素材库 <span style="font-size:11px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${DB.phrases.length} 条</span></h2>
-  <input class="search-input" id="talkSearch" placeholder="🔍 搜索话术…" value="${esc(renderTalk._kw||'')}">
-  <div class="pill-row">${cats.map(c=>`<div class="pill ${cur===c?'active':''}" data-cat="${c}">${c}</div>`).join('')}</div>
+  <div class="card"><h2>🌟 今日推荐话术 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${netStatus}</span></h2>
   <div class="list">
-    ${list.length?list.map((p,i)=>`<div class="info-item"><div><span class="tag">${p.cat}</span><span class="i-title">${esc(p.q)}</span></div><div class="i-desc">${esc(p.a)}</div>
-    <div class="ops" style="margin-top:6px;"><button class="icon-btn" data-a="copyPh" data-i="${DB.phrases.indexOf(p)}" title="复制">📋</button><button class="icon-btn del" data-a="delPh" data-i="${DB.phrases.indexOf(p)}">✕</button></div></div>`).join(''):'<div class="empty">没有匹配的话术</div>'}
+  ${picks.map(p=>`<div class="info-item" style="background:linear-gradient(150deg,#fff7fa,#fdeef3);border:1px solid rgba(248,200,212,.7);">
+    <div><span class="tag">${esc(p.cat||'精选')}</span><span class="i-title">${esc(p.q)}</span></div>
+    <div class="i-desc">${esc(p.a)}</div>
+    <div class="ops" style="margin-top:6px;gap:6px;">
+      <button class="mini-btn" data-a="copyPh" data-q="${esc(p.q).replace(/"/g,'&quot;')}" data-t="${esc(p.a).replace(/"/g,'&quot;')}">📋 复制</button>
+      <button class="mini-btn" data-a="savePh" data-q="${esc(p.q).replace(/"/g,'&quot;')}" data-c="${esc(p.cat||'高情商回复')}" data-t="${esc(p.a).replace(/"/g,'&quot;')}">⭐ 收藏</button>
+    </div></div>`).join('')}
   </div>
-  <div class="form"><input id="phQ" placeholder="场景，如：如何婉拒邀约"><input id="phA" placeholder="话术内容"><button class="btn-main" data-a="addPh">补充</button></div>
-  <div class="form"><select id="phCat" style="flex:0 0 110px;">${cats.slice(1).map(c=>`<option>${c}</option>`).join('')}</select><button class="btn-main" data-a="addPh" style="flex:1;">＋ 添加到我库</button></div></div>`;
+  <div class="add-row" style="display:flex;gap:8px;">
+    <button class="add-btn" data-a="talkShuffle" style="flex:1;">🔄 换一批</button>
+    <button class="add-btn" data-a="talkOnline" style="flex:1;">🌐 联网刷新</button>
+  </div>
+  <div class="hint">共 ${pool.length} 条精选，每天自动换一组 6 条。点「🌐 联网刷新」会尝试从公开话术源拉取新内容合并进来；拉不到时自动用本地精选兜底，不影响使用。</div></div>
+
+  <div class="card"><h2>💬 话术素材库 <span style="font-size:11px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${pool.length} 条</span></h2>
+  <input class="search-input" id="talkSearch" placeholder="🔍 搜索话术、场景关键词…" value="${esc(renderTalk._kw||'')}">
+  <div class="pill-row">${cats.map(c=>{const n=c==='全部'?pool.length:pool.filter(p=>p.cat===c).length;
+    return `<div class="pill ${cur===c?'active':''}" data-cat="${c}">${c} ${n}</div>`;}).join('')}</div>
+  <div class="list">
+    ${list.length?list.map(p=>{
+      const gi=pool.indexOf(p);
+      return `<div class="info-item" ${p.online?'style="border-color:rgba(143,169,222,.5);"':''}>
+      <div><span class="tag">${esc(p.cat)}</span>${p.online?'<span class="tag" style="background:#eaf0fb;color:#6f8fd6;">🌐 在线</span>':''}${p.mine?'<span class="tag" style="background:#f0fbf4;color:#4caf7d;">我加的</span>':''}<span class="i-title">${esc(p.q)}</span></div>
+      <div class="i-desc">${esc(p.a)}</div>
+      <div class="ops" style="margin-top:6px;gap:6px;">
+        <button class="mini-btn" data-a="talkCopy" data-i="${gi}">📋 复制</button>
+        <button class="mini-btn" data-a="talkEdit" data-i="${gi}">✏️ 改</button>
+        <button class="mini-btn" data-a="talkDel" data-i="${gi}" style="color:#e87878;border-color:#f8d0d0;">✕ 删</button>
+      </div></div>`;}).join(''):'<div class="empty">没有匹配的话术，换个词试试 🌸</div>'}
+  </div>
+  <div class="hint">共 ${list.length} 条匹配结果 · 数量不限，可自由增加与删减</div>
+  </div>
+
+  <div class="card"><h2>➕ 增加话术</h2>
+  <div class="form"><select id="phCat" style="flex:0 0 104px;">${cats.slice(1).map(c=>`<option ${(renderTalk._addCat===c)?'selected':''}>${c}</option>`).join('')}</select>
+    <input id="phQ" placeholder="使用场景，如：被当众调侃时" value="${esc(renderTalk._addQ||'')}"></div>
+  <div class="form"><textarea id="phA" placeholder="话术内容，可以直接照着说…" rows="3" style="flex:1;border:1.5px solid rgba(248,200,212,.8);border-radius:12px;padding:9px 12px;font-size:13px;background:#fffafc;outline:none;font-family:inherit;resize:vertical;">${esc(renderTalk._addA||'')}</textarea></div>
+  <div class="form"><button class="btn-main" data-a="addPh" style="flex:1;">＋ 加入我的话术库</button></div>
+  <div class="hint">新增的话术会标记「我加的」，随时可以删改。</div></div>`;
+}
+
+/* 复制文本（含 iOS 兜底） */
+function copyText(txt,okMsg){
+  const done=()=>toast(okMsg||'已复制 📋');
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallback());
+  }else fallback();
+  function fallback(){
+    const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    try{document.execCommand('copy');done();}catch(e){toast('复制失败，请长按选择');}
+    ta.remove();
+  }
+}
+
+/* 联网刷新话术：尝试公开 CORS 接口，失败则本地精选扩充 */
+async function talkOnlineFetch(){
+  renderTalk._netFetching=true;render();
+  const sources=[
+    // 公开语录/一言类接口，支持 CORS，作为"在线内容"来源
+    {url:'https://v1.hitokoto.cn/?c=k&encode=json',pick:j=>j.hitokoto?{q:'今日一句 · 人情世故',a:j.hitokoto}:null},
+    {url:'https://api.quotable.io/random?tags=communication|wisdom&maxLength=120',pick:j=>j.content?{q:'沟通智慧 · '+(j.author||'名言'),a:j.content}:null},
+  ];
+  let got=[];
+  for(const src of sources){
+    try{
+      const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),5000);
+      const r=await fetch(src.url,{signal:ctl.signal,cache:'no-store'});
+      clearTimeout(tm);
+      if(!r.ok)continue;
+      const j=await r.json();
+      const item=src.pick(j);
+      if(item&&item.a)got.push({...item,cat:'高情商回复',online:true});
+    }catch(e){/* 忽略单个源失败 */}
+  }
+  renderTalk._netFetching=false;
+  if(!got.length){render();toast('网络源暂不可用，已使用本地精选');return false;}
+  DB.talkOnline={at:new Date().toLocaleString('zh-CN',{hour12:false}).slice(5,16),items:got.length};
+  DB.talkBatch=(DB.talkBatch||0)+1;
+  // 合并去重
+  got.forEach(g=>{
+    if(!DB.phrases.some(p=>p.a===g.a))DB.phrases.unshift(g);
+  });
+  save();render();
+  toast('已联网更新 '+got.length+' 条话术 🌐');
+  return true;
 }
 
 /* ---- 黄金财经 ---- */
@@ -1467,12 +1652,29 @@ function handleAction(btn){
       save();render();
       if((+d2.amount||0)-(+d2.repaid||0)<=0)toast('这笔还清啦，太棒了 🎉');break;}
     case 'save/delDebt':DB.save.debts.splice(i,1);save();render();break;
-    case 'talk/addPh':{const q=g('phQ').value.trim(),ans=g('phA').value.trim();if(!q||!ans)return toast('场景和内容都要填哦');
+    case 'talk/addPh':{const q=g('phQ')?g('phQ').value.trim():'',ans=g('phA')?g('phA').value.trim():'';
+      if(!q||!ans)return toast('场景和内容都要填哦');
       const catEl=g('phCat');const cat=catEl?catEl.value:(renderTalk._cat&&renderTalk._cat!=='全部'?renderTalk._cat:'职场');
-      DB.phrases.unshift({cat,q,a:ans,mine:true});save();render();toast('已加入话术库 🌸');break;}
+      DB.phrases.unshift({cat,q,a:ans,mine:true,at:new Date().toLocaleDateString('zh-CN')});
+      renderTalk._addQ='';renderTalk._addA='';
+      save();render();toast('已加入话术库 🌸');break;}
     case 'talk/talkShuffle':DB.talkBatch=(DB.talkBatch||0)+1;save();render();break;
-    case 'talk/copyPh':{const ph=DB.phrases[i];if(!ph)break;
-      try{navigator.clipboard.writeText(ph.a);toast('话术已复制 📋');}catch(e){toast('复制失败，请手动选择');}break;}
+    case 'talk/talkOnline':talkOnlineFetch();break;
+    case 'talk/copyPh':copyText(btn.dataset.t||'', '话术已复制 📋');break;
+    case 'talk/talkCopy':{const ph=DB.phrases[i];if(!ph)break;copyText(ph.a,'话术已复制 📋');break;}
+    case 'talk/savePh':{const q=btn.dataset.q,a2=btn.dataset.t,c2=btn.dataset.c||'高情商回复';
+      if(!a2)break;
+      if(DB.phrases.some(p=>p.a===a2))return toast('这条已经在库里啦');
+      DB.phrases.unshift({cat:c2,q,a:a2,mine:true});save();render();toast('已收藏进话术库 ⭐');break;}
+    case 'talk/talkEdit':{const ph=DB.phrases[i];if(!ph)break;
+      const nv=prompt('修改话术内容（取消则不变）',ph.a);
+      if(nv===null)break;if(!nv.trim())return toast('内容不能为空');
+      const nq=prompt('场景描述（可改，取消保持不变）',ph.q);
+      ph.a=nv.trim();if(nq!==null&&nq.trim())ph.q=nq.trim();
+      save();render();toast('已更新 ✏️');break;}
+    case 'talk/talkDel':{const ph=DB.phrases[i];if(!ph)break;
+      if(!confirm('确定删除这条话术？\n\n'+(ph.q||'')))break;
+      DB.phrases.splice(i,1);save();render();toast('已删除');break;}
     case 'talk/delPh':DB.phrases.splice(i,1);save();render();break;
     case 'sync/saveCfg':{SYNC_CFG={url:g('cfgUrl').value.trim(),key:g('cfgKey').value.trim(),uid:g('cfgUid').value.trim()||'yunqi'};localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));logSync('⚙️ 已保存同步配置');render();toast('配置已保存');break;}
     case 'sync/pushNow':pushCloud();break;
@@ -1507,13 +1709,15 @@ document.addEventListener('input',e=>{
   if(e.target.id==='finNote'){renderFinance._note=e.target.value;return;}
   if(e.target.id==='finDate'){renderFinance._date=e.target.value;return;}
   if(e.target.id==='finBudget'){renderFinance._budget=e.target.value;return;}
+  if(e.target.id==='phQ'){renderTalk._addQ=e.target.value;return;}
+  if(e.target.id==='phA'){renderTalk._addA=e.target.value;return;}
   if(e.target.id==='talkSearch'){renderTalk._kw=e.target.value;
     const list=document.getElementById('main');
     // 仅重渲染列表区域，避免输入框失焦
     setTimeout(()=>{const kw=renderTalk._kw;const main=document.getElementById('main');
       // 简化：重建整个页面但恢复焦点
       const pos=e.target.selectionStart;render();
-      const inp=document.getElementById('talkSearch');if(inp){inp.focus();inp.setSelectionRange(pos,pos);}},0);
+      const inp=document.getElementById('talkSearch');if(inp){inp.focus();if(inp.setSelectionRange)inp.setSelectionRange(pos,pos);}},0);
   }
 });
 

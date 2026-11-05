@@ -402,7 +402,52 @@ function logSync(msg,type='info'){
   localStorage.setItem('yunqi_sync_log',JSON.stringify(SYNC_LOG));
 }
 function syncReady(){return SYNC_CFG.url&&SYNC_CFG.key;}
+/* 配置是否可用：URL 必须是 supabase 项目地址，key 必须像一把 key */
+function cfgValid(){
+  if(!SYNC_CFG.url||!SYNC_CFG.key)return 'URL 或 Key 为空';
+  if(!/supabase\.(co|in|net)/i.test(SYNC_CFG.url))return 'URL 不是 Supabase 项目地址';
+  if(!/^sb_(publishable|secret)_/i.test(SYNC_CFG.key)&&!/^eyJ/.test(SYNC_CFG.key))return 'Key 格式不正确';
+  return '';
+}
 /* 设定页单个输入框的粘贴：优先读剪贴板，失败则聚焦并提示长按粘贴 */
+/* 读剪贴板（带兜底提示） */
+function readClip(cb,fieldId){
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    navigator.clipboard.readText().then(t=>{
+      const v=(t||'').trim();
+      if(!v){toast('剪贴板是空的');return;}
+      cb(v);
+    }).catch(()=>{
+      const el=fieldId&&document.getElementById(fieldId);
+      if(el){el.focus();el.select&&el.select();}
+      toast('长按输入框 → 粘贴');
+    });
+  }else{
+    const el=fieldId&&document.getElementById(fieldId);
+    if(el){el.focus();el.select&&el.select();}
+    toast('长按输入框 → 粘贴');
+  }
+}
+/* 智能识别粘贴内容：Supabase 域名→填 URL，sb_ 开头→填 Key，其他网址→拒绝 */
+function applyPasted(raw){
+  const v=(raw||'').trim().replace(/\s/g,'');
+  // 1. Supabase 项目地址
+  if(/supabase\.(co|in|net)/i.test(v)&&/^https?:\/\//i.test(v)){
+    let u=v.replace(/\/rest\/v1.*$/i,'').replace(/\/+$/,'');
+    renderSync._url=u;renderSync._key=undefined;   // 同时清掉可能残留的错误 key 显示占位
+    return '已填入 Supabase 地址';
+  }
+  // 2. Supabase key（新版 publishable / anon / service_role，JWT 也认）
+  if(/^sb_(publishable|secret)_/i.test(v)||/^eyJ[\w-]{10,}\./.test(v)){
+    renderSync._key=v;renderSync._url=undefined;
+    return '已填入 Key（结尾 '+v.slice(-8)+'）';
+  }
+  // 3. 其他网址：明确拒绝，避免像刚才那样把网页地址当 key
+  if(/^https?:\/\//i.test(v)){
+    return '⚠️ 这是普通网址，不是 Supabase 的 Key，请点「⚡ 一键填入」';
+  }
+  return '⚠️ 无法识别，请点「⚡ 一键填入我的配置」';
+}
 function fillCfgField(id,key){
   const el=document.getElementById(id);
   const apply=t=>{
@@ -423,6 +468,8 @@ function fillCfgField(id,key){
 }
 async function pushCloud(silent){
   if(!syncReady()){if(!silent)toast('请先在 ⚙️ 设置中配置 Supabase');return;}
+  const bad=cfgValid();
+  if(bad){logSync('⬆️ 上传失败：'+bad,'err');if(!silent)toast('配置有误：'+bad);return;}
   try{
     const base=SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data';
     const hdr={'apikey':SYNC_CFG.key,'Authorization':'Bearer '+SYNC_CFG.key,'Content-Type':'application/json'};
@@ -1859,24 +1906,27 @@ function handleAction(btn){
       if(syncReady())pushCloud(true);
       break;}
     case 'sync/fillDefault':{
-      renderSync._url='https://qexlkpwhmqqxjbqvxovy.supabase.co';
-      renderSync._key='sb_publishable_4aYWG6_cbT3yYq38UvRLqw_tctJ59iM';
-      renderSync._uid='yunqi';render();toast('已填入，点「保存配置」');break;}
+      SYNC_CFG={url:'https://qexlkpwhmqqxjbqvxovy.supabase.co',key:'sb_publishable_4aYWG6_cbT3yYq38UvRLqw_tctJ59iM',uid:'yunqi'};
+      localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));
+      renderSync._url=renderSync._key=renderSync._uid=undefined;
+      logSync('⚡ 已填入并保存默认配置','ok');
+      render();toast('已填入并保存，正在连接…');
+      pushCloud(true);
+      break;}
     case 'sync/pasteFromClip':{
       if(navigator.clipboard&&navigator.clipboard.readText){
         navigator.clipboard.readText().then(t=>{
-          if(!t){toast('剪贴板是空的');return;}
-          // 自动识别：http 开头当 URL，其余当 key
-          if(/^https?:\/\//i.test(t.trim()))renderSync._url=t.trim();
-          else renderSync._key=t.trim().replace(/\s/g,'');
-          render();toast('已粘贴：'+(/^https?:/i.test(t)?'URL':'Key'));
+          const v=(t||'').trim();
+          if(!v){toast('剪贴板是空的');return;}
+          const r=applyPasted(v);
+          render();toast(r);
         }).catch(()=>toast('无权限读取剪贴板，请长按输入框手动粘贴'));
       }else toast('此浏览器不支持自动读取，请长按输入框手动粘贴');
       break;}
     case 'sync/pasteUrl':{
-      fillCfgField('cfgUrl','_url');break;}
+      readClip(v=>{const r=applyPasted(v);render();toast(r);},'cfgUrl');break;}
     case 'sync/pasteKey':{
-      fillCfgField('cfgKey','_key');break;}
+      readClip(v=>{const r=applyPasted(v);render();toast(r);},'cfgKey');break;}
     case 'sync/pushNow':pushCloud();break;
     case 'sync/pullNow':pullCloud(false,true);break;
     case 'sync/clearLog':SYNC_LOG=[];localStorage.setItem('yunqi_sync_log','[]');render();break;

@@ -142,19 +142,44 @@ header{text-align:center;padding:6px 0 4px;}
 /* 数据卡片 4 宫格 */
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
 .stat{
-  background:linear-gradient(148deg,#fff4e6 0%,#ffe9f2 34%,#eaf8ea 68%,#d6f0e0 100%);
-  border:1px solid rgba(158,214,184,.55);
   border-radius:18px;
   padding:12px 10px;
   text-align:center;
-  box-shadow:0 3px 12px rgba(255,186,110,.15),0 2px 8px rgba(160,214,186,.16);
   position:relative;
   overflow:hidden;
+  transition:.2s;
 }
-/* 右下角一抹浅绿点缀 */
+/* 三套主题色：粉 / 黄 / 绿 轮流 */
+.stat.tone-pink{
+  background:linear-gradient(148deg,#fff1f6 0%,#ffe0ec 55%,#ffcfe0 100%);
+  border:1px solid rgba(246,168,196,.65);
+  box-shadow:0 3px 12px rgba(238,111,146,.16);
+}
+.stat.tone-pink::after{background:radial-gradient(circle,rgba(255,255,255,.65) 0%,rgba(255,255,255,0) 70%);}
+.stat.tone-pink .num{background:linear-gradient(120deg,#d94e79,#e8607f 60%,#c9456d);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.stat.tone-pink .label{color:#c2687f;}
+
+.stat.tone-butter{
+  background:linear-gradient(148deg,#fffbe8 0%,#fff3c9 55%,#ffe9a8 100%);
+  border:1px solid rgba(255,206,110,.65);
+  box-shadow:0 3px 12px rgba(240,180,60,.18);
+}
+.stat.tone-butter::after{background:radial-gradient(circle,rgba(255,255,255,.7) 0%,rgba(255,255,255,0) 70%);}
+.stat.tone-butter .num{background:linear-gradient(120deg,#c98a12,#d99a20 60%,#b87a08);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.stat.tone-butter .label{color:#bf9752;}
+
+.stat.tone-mint{
+  background:linear-gradient(148deg,#f2fcf5 0%,#e2f7ea 55%,#cdeedb 100%);
+  border:1px solid rgba(150,212,180,.65);
+  box-shadow:0 3px 12px rgba(120,190,155,.18);
+}
+.stat.tone-mint::after{background:radial-gradient(circle,rgba(255,255,255,.68) 0%,rgba(255,255,255,0) 70%);}
+.stat.tone-mint .num{background:linear-gradient(120deg,#3f8b64,#4f9e74 60%,#357a55);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.stat.tone-mint .label{color:#6fa78a;}
+
+/* 右上角小圆点标识 */
 .stat::after{
   content:'';position:absolute;right:-16px;bottom:-16px;width:48px;height:48px;border-radius:50%;
-  background:radial-gradient(circle,rgba(150,216,182,.72) 0%,rgba(150,216,182,0) 70%);
   pointer-events:none;
 }
 .stat .label{font-size:11px;color:#c4917f;font-weight:600;}
@@ -317,11 +342,15 @@ header{text-align:center;padding:6px 0 4px;}
 .streak-badge{background:linear-gradient(135deg,#ffc23e,#f87f8c);color:#fff;font-size:11px;border-radius:10px;padding:4px 11px;font-weight:700;box-shadow:0 3px 9px rgba(255,180,100,.3);}
 .nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .nav-card{
-  background:linear-gradient(150deg,#fff9f0 0%,#ffedf5 45%,#e9f8ec 78%,#d9f2e3 100%);
-  border:1px solid rgba(255,203,155,.6);
   border-radius:17px;padding:12px 6px;text-align:center;cursor:pointer;
-  transition:.15s;box-shadow:0 2px 9px rgba(255,196,120,.12);
+  transition:.15s;
 }
+.nav-card.tone-pink{background:linear-gradient(150deg,#fff3f8,#ffe2ee 60%,#ffd4e4);border:1px solid rgba(246,168,196,.55);box-shadow:0 2px 9px rgba(238,111,146,.14);}
+.nav-card.tone-pink .v{color:#d94e79;}
+.nav-card.tone-butter{background:linear-gradient(150deg,#fffcee,#fff4cf 60%,#ffeab0);border:1px solid rgba(255,206,110,.55);box-shadow:0 2px 9px rgba(240,180,60,.16);}
+.nav-card.tone-butter .v{color:#c98a12;}
+.nav-card.tone-mint{background:linear-gradient(150deg,#f4fcf6,#e5f8ed 60%,#d2f0de);border:1px solid rgba(150,212,180,.55);box-shadow:0 2px 9px rgba(120,190,155,.16);}
+.nav-card.tone-mint .v{color:#3f8b64;}
 .nav-card:active{transform:scale(.96);}
 .nav-card .e{font-size:24px;}
 .nav-card .n{font-size:11px;color:var(--text-dark);margin-top:6px;font-weight:700;}
@@ -691,7 +720,14 @@ function renderNav(){
 }
 
 /* ================= 页面渲染 ================= */
-function statsCard(label,num,unit){return `<div class="stat"><div class="label">${label}</div><div class="num">${num}${unit?`<small> ${unit}</small>`:''}</div></div>`;}
+/* 数据卡：每个格子主题色轮流（粉 / 黄 / 绿） */
+let TONE_I=0;
+function statsCard(label,num,unit){
+  const tone=['pink','butter','mint'][TONE_I%3];TONE_I++;
+  return `<div class="stat tone-${tone}"><div class="label">${label}</div><div class="num">${num}${unit?`<small> ${unit}</small>`:''}</div></div>`;
+}
+/* 每次渲染前重置计数，保证同页颜色分配稳定 */
+function resetTone(){TONE_I=0;}
 
 
 /* 本周（周一起）日期数组 */
@@ -846,7 +882,8 @@ function renderHome(){
         if(m.id==='study')v=studyMin+'分钟';
         if(m.id==='earn')v='¥'+fmtN(got);
         if(m.id==='save')v='¥'+fmtN(saved);
-        return `<div class="nav-card" data-id="${m.id}"><div class="e">${m.icon}</div><div class="n">${m.name}</div><div class="v">${v}</div></div>`;
+        const tn=['pink','butter','mint'][(MODULES.filter(x=>x.id!=='home').findIndex(x=>x.id===m.id))%3];
+        return `<div class="nav-card tone-${tn}" data-id="${m.id}"><div class="e">${m.icon}</div><div class="n">${m.name}</div><div class="v">${v}</div></div>`;
       }).join('')}
     </div>
   </div>
@@ -1785,6 +1822,7 @@ document.addEventListener('input',e=>{
 
 /* ================= 主渲染 ================= */
 function render(){
+  resetTone();
   renderNav();
   const m=document.getElementById('main');
   const map={home:renderHome,plan:renderPlan,sport:renderSport,money:renderFinance,pod:renderPod,study:renderStudy,hot:renderHot,ai:renderAI,earn:renderEarn,save:renderSave,talk:renderTalk,gold:renderGold,sync:renderSync};

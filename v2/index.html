@@ -180,6 +180,46 @@ header{text-align:center;padding:6px 0 4px;}
   border:none;cursor:pointer;font-family:inherit;
   border-radius:10px;padding:4px 10px;display:inline-block;}
 .jump:active{background:#f9d7e2;}
+/* 展开详情 */
+.detail{background:#fffdfd;border:1px dashed rgba(248,200,212,.9);border-radius:12px;
+  padding:8px 10px;margin-top:8px;font-size:12px;color:#a97b8a;line-height:1.7;}
+.detail b{color:var(--text-dark);}
+.row.clickable{cursor:pointer;}
+.row .caret{color:#d3a8b5;font-size:11px;transform:rotate(0deg);transition:.2s;}
+.row.open .caret{transform:rotate(180deg);}
+/* 目标卡 */
+.goal-card{background:linear-gradient(150deg,#fff7fa,#fdeef3);border:1px solid rgba(248,200,212,.6);
+  border-radius:16px;padding:12px;margin-bottom:10px;}
+.goal-card .g-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text-dark);}
+.goal-card .g-sub{font-size:11px;color:#c2899a;margin-top:4px;}
+.ring{display:flex;align-items:center;gap:12px;}
+.ring svg{flex-shrink:0;}
+/* 历史筛选 */
+.hist-item{background:#fff8fa;border:1px solid rgba(248,200,212,.45);border-radius:14px;
+  padding:10px 12px;margin-bottom:8px;}
+.hist-item .h-head{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text-dark);}
+.hist-item .h-body{font-size:12px;color:#a97b8a;margin-top:6px;line-height:1.8;}
+.hist-item .h-body .done{color:#4caf7d;}
+.hist-item .h-body .undone{color:#c2899a;}
+/* 首页目标浏览 / 进度浏览 */
+.seg{display:flex;background:#fdeef3;border-radius:11px;padding:2px;gap:2px;}
+.seg-i{font-size:11px;padding:4px 10px;border-radius:9px;color:#c2899a;cursor:pointer;transition:.2s;font-weight:600;}
+.seg-i.on{background:#fff;color:var(--pink-rose);box-shadow:0 2px 6px rgba(240,106,138,.18);}
+.goal-sum{display:flex;gap:8px;margin-bottom:10px;}
+.goal-sum .gs{flex:1;background:linear-gradient(150deg,#fff7fa,#fdeef3);border:1px solid rgba(248,200,212,.55);
+  border-radius:13px;padding:8px 4px;text-align:center;}
+.goal-sum .gs b{display:block;font-size:17px;color:var(--pink-rose);font-weight:800;}
+.goal-sum .gs span{font-size:10px;color:#c2899a;}
+.go-row,.pg-row{background:#fffafc;border:1px solid rgba(248,200,212,.5);border-radius:14px;padding:9px 11px;margin-bottom:8px;}
+.go-row.ok{background:linear-gradient(150deg,#f4fbf7,#eaf7ef);border-color:rgba(127,191,154,.5);}
+.go-head,.pg-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text-dark);}
+.go-pct{font-size:13px;font-weight:800;color:var(--pink-rose);font-variant-numeric:tabular-nums;}
+.go-sub{font-size:11px;color:#b08a97;margin-top:4px;line-height:1.6;}
+.go-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.chip{font-size:11px;padding:5px 11px;border-radius:20px;background:#fdeef3;color:#c9899b;
+  border:1px solid rgba(248,200,212,.8);cursor:pointer;}
+.chip:active{background:#fbd9e4;}
+
 .search-input{width:100%;border:1.5px solid rgba(248,200,212,.8);border-radius:12px;padding:9px 12px;font-size:13px;background:#fffafc;outline:none;margin-bottom:10px;}
 .empty{text-align:center;color:#d3a8b5;font-size:12px;padding:14px 0;}
 .toast{
@@ -568,6 +608,93 @@ function renderNav(){
 
 /* ================= 页面渲染 ================= */
 function statsCard(label,num,unit){return `<div class="stat"><div class="label">${label}</div><div class="num">${num}${unit?`<small> ${unit}</small>`:''}</div></div>`;}
+
+/* ---- 目标浏览：汇总各栏目的目标与进度 ---- */
+function goalList(){
+  const t=today();
+  const out=[];
+  // 1. 存钱目标
+  let total=0;Object.values(DB.save).forEach(v=>{if(Array.isArray(v))v.forEach(x=>total+=+x.amount||0);});
+  const svGoal=+DB.save.goal||0;
+  const svName=DB.save.goalName||'存钱目标';
+  const svDate=DB.save.goalDate||'';
+  const svDays=svDate?Math.ceil((new Date(svDate)-new Date())/86400000):null;
+  out.push({
+    icon:'🪙',name:svName,
+    pct:svGoal>0?Math.min(100,Math.round(total/svGoal*100)):0,
+    detail:svGoal>0?`已存 ¥${fmtN(total)} / 目标 ¥${fmtN(svGoal)}，还差 ¥${fmtN(Math.max(0,svGoal-total))}`:'还没有设定存钱目标',
+    extra:svDate?`🗓️ ${svDate} 前完成${svDays!==null?(svDays<0?'（已过期）':`（还剩 ${svDays} 天）`):''}`:'',
+  });
+  // 2. 赚钱目标
+  const emGoal=+DB.money.goal||0;
+  let emTotal=0;Object.values(DB.money).forEach(v=>{if(Array.isArray(v))v.forEach(x=>emTotal+=+x.got||0);});
+  out.push({
+    icon:'💸',name:'每日赚钱目标',
+    pct:emGoal>0?Math.min(100,Math.round(emTotal/emGoal*100)):0,
+    detail:emGoal>0?`累计到手 ¥${fmtN(emTotal)} / 日目标 ¥${fmtN(emGoal)}`:'还没有设定赚钱目标',
+    extra:(DB.money[t]||[]).length?`今日已录 ${(DB.money[t]||[]).length} 个平台`:'今日还没录入',
+  });
+  // 3. 学习目标（按累计时长折算 30 小时）
+  let stTotal=0,stDays=0;Object.values(DB.study).forEach(l=>{if(Array.isArray(l))l.forEach(x=>stTotal+=+x.min||0);});
+  Object.keys(DB.study).forEach(k=>{if((DB.study[k]||[]).length)stDays++;});
+  const stTarget=1800;
+  out.push({
+    icon:'📚',name:'学习时长目标（30h）',
+    pct:Math.min(100,Math.round(stTotal/stTarget*100)),
+    detail:`累计 ${(stTotal/60).toFixed(1)} 小时 / 30 小时`,
+    extra:`已坚持 ${stDays} 天有学习记录`,
+  });
+  // 4. 运动目标（按累计 6000 分钟折算）
+  let spTotal=0,spDays=0;Object.values(DB.sports).forEach(l=>{if(Array.isArray(l))l.forEach(x=>spTotal+=+x.min||0);});
+  Object.keys(DB.sports).forEach(k=>{if((DB.sports[k]||[]).length)spDays++;});
+  out.push({
+    icon:'🏃',name:'运动时长目标（100h）',
+    pct:Math.min(100,Math.round(spTotal/6000*100)),
+    detail:`累计 ${(spTotal/60).toFixed(1)} 小时 / 100 小时`,
+    extra:`运动 ${spDays} 天 · 平均每次 ${spDays?Math.round(spTotal/Math.max(1,Object.values(DB.sports).reduce((a,b)=>a+b.length,0))):0} 分钟`,
+  });
+  // 5. 今日计划完成目标（100% 完成）
+  const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
+  out.push({
+    icon:'📋',name:'今日计划全部完成',
+    pct:pl.length?Math.round(pd/pl.length*100):0,
+    detail:pl.length?`已完成 ${pd} / ${pl.length} 条`:'今天还没有待办',
+    extra:pl.length&&pd===pl.length?'🎉 今日计划全部完成啦':'加油，一条一条来 🌸',
+  });
+  return out;
+}
+
+/* ---- 完成进度浏览：各栏目今日完成率 ---- */
+function progressList(){
+  const t=today();
+  const arr=[];
+  const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
+  arr.push({icon:'📋',name:'每日计划',val:pl.length?Math.round(pd/pl.length*100):0,color:'#f06a8a',
+    detail:pl.length?`${pd}/${pl.length} 条完成`:'暂无待办'});
+  const sp=(DB.sports[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
+  arr.push({icon:'🏃',name:'每日运动',val:Math.min(100,Math.round(sp/30*100)),color:'#7fbf9a',
+    detail:`${sp} 分钟 / 目标 30 分钟`});
+  const st=(DB.study[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
+  arr.push({icon:'📚',name:'每日学习',val:Math.min(100,Math.round(st/60*100)),color:'#8fa9de',
+    detail:`${st} 分钟 / 目标 60 分钟`});
+  const sv=(DB.save[t]||[]).reduce((a,b)=>a+(+b.amount||0),0);
+  const svDayGoal=+DB.save.dayGoal||50;
+  arr.push({icon:'🪙',name:'今日存钱',val:Math.min(100,Math.round(sv/svDayGoal*100)),color:'#f0b96a',
+    detail:`已存 ¥${fmtN(sv)} / 日目标 ¥${fmtN(svDayGoal)}`});
+  const em=(DB.money[t]||[]).reduce((a,b)=>a+(+b.got||0),0);
+  const emDayGoal=+DB.money.goal||50;
+  arr.push({icon:'💸',name:'今日赚钱',val:Math.min(100,Math.round(em/emDayGoal*100)),color:'#c69ae0',
+    detail:`到手 ¥${fmtN(em)} / 日目标 ¥${fmtN(emDayGoal)}`});
+  const fin=DB.finance[t]||{list:[]};
+  const spend=(fin.list||[]).reduce((a,b)=>a+(+b.amount||0),0);
+  arr.push({icon:'🔥',name:'连续打卡',val:Math.min(100,checkinStreak()*10),color:'#ee8b8b',
+    detail:`已连续 ${checkinStreak()} 天（目标 10 天）`});
+  arr.push({icon:'💰',name:'今日记账',val:(DB.finance[t]&&DB.finance[t].list&&DB.finance[t].list.length)?100:0,color:'#e9a0b8',
+    detail:(DB.finance[t]&&DB.finance[t].list&&DB.finance[t].list.length)?`已记 ${DB.finance[t].list.length} 笔 · 共 ¥${fmtN(spend)}`:'今天还没记账'});
+  arr.push({icon:'✅',name:'今日打卡',val:DB.checkin[t]?100:0,color:'#f06a8a',
+    detail:DB.checkin[t]?'已打卡，太棒啦':'还没打卡，点右上角'});
+  return arr;
+}
 function checkinStreak(){
   let n=0;const d=new Date();
   while(true){const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -587,6 +714,9 @@ function renderHome(){
   const streak=checkinStreak();
   const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
   const g=goldToday();
+  const goals=goalList();
+  const prog=progressList();
+  const tab=renderHome._tab||'goal';
   return `
   <header class="header-top">
     <div id="clock">${new Date().toTimeString().slice(0,8)}</div>
@@ -618,6 +748,44 @@ function renderHome(){
         return `<div class="nav-card" data-id="${m.id}"><div class="e">${m.icon}</div><div class="n">${m.name}</div><div class="v">${v}</div></div>`;
       }).join('')}
     </div>
+  </div>
+  <div class="card"><h2>${tab==='goal'?'🎯 目标浏览':'📊 完成进度浏览'}
+    <div class="seg" style="margin-left:auto;">
+      <span class="seg-i ${tab==='goal'?'on':''}" data-a="homeTab" data-v="goal">目标</span>
+      <span class="seg-i ${tab==='done'?'on':''}" data-a="homeTab" data-v="done">进度</span>
+    </div></h2>
+    ${tab==='goal'?`
+    <div class="goal-sum">
+      <div class="gs"><b>${goals.length}</b><span>个目标</span></div>
+      <div class="gs"><b>${goals.filter(x=>x.pct>=100).length}</b><span>已达成</span></div>
+      <div class="gs"><b>${goals.length?Math.round(goals.reduce((a,b)=>a+b.pct,0)/goals.length):0}%</b><span>平均进度</span></div>
+    </div>
+    <div class="list">
+      ${goals.length?goals.map((x,i)=>`<div class="go-row ${x.pct>=100?'ok':''}">
+        <div class="go-head"><span>${x.icon} ${esc(x.name)}</span><span class="go-pct">${x.pct}%</span></div>
+        <div class="progress" style="height:7px;margin-top:6px;"><div style="width:${Math.min(100,x.pct)}%"></div></div>
+        <div class="go-sub">${x.detail}</div>
+        <div class="go-sub">${x.extra}</div>
+      </div>`).join(''):'<div class="empty">还没有设定目标，去存钱/赚钱/学习页设一个吧 🎯</div>'}
+    </div>
+    <div class="hint">目标数据来自「存钱 / 赚钱 / 学习 / 运动 / 计划」各栏目的设定值，可点击下方按钮直接去设置。</div>
+    <div class="go-links">
+      <span class="chip" data-a="goModule" data-v="save">🪙 存钱目标</span>
+      <span class="chip" data-a="goModule" data-v="earn">💸 赚钱目标</span>
+      <span class="chip" data-a="goModule" data-v="study">📚 学习记录</span>
+      <span class="chip" data-a="goModule" data-v="plan">📋 计划进度</span>
+    </div>`:`
+    <div class="list">
+      ${prog.map(x=>`<div class="pg-row">
+        <div class="pg-head"><span>${x.icon} ${x.name}</span><span class="go-pct" style="color:${x.color}">${x.val}%</span></div>
+        <div class="progress" style="height:7px;margin-top:6px;"><div style="width:${Math.min(100,x.val)}%;background:linear-gradient(90deg,${x.color}aa,${x.color});"></div></div>
+        <div class="go-sub">${x.detail}</div>
+      </div>`).join('')}
+    </div>
+    <div class="hint">进度 = 今日实际 / 今日目标（存钱、赚钱按设定金额，运动按 30 分钟，学习按 60 分钟，计划按完成条数）。</div>
+    <div class="go-links">
+      <span class="chip" data-a="homeTab" data-v="goal">🎯 去看目标浏览</span>
+    </div>`}
   </div>`;
 }
 
@@ -625,7 +793,10 @@ function renderHome(){
 function renderPlan(){
   const t=today();const list=DB.plans[t]||[];
   const done=list.filter(p=>p.done).length;
-  const hist=Object.keys(DB.plans).sort().reverse().slice(0,7);
+  const openIdx=(renderPlan._open||[]);
+  const hist=Object.keys(DB.plans).sort().reverse();
+  const range=renderPlan._range||'7';
+  const histList=(range==='all'?hist:hist.slice(0,parseInt(range)||7));
   return `${moduleHeader(MODULES[1])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
     ${statsCard('今日完成',done)}
@@ -633,21 +804,42 @@ function renderPlan(){
     ${statsCard('累计记录',Object.values(DB.plans).reduce((a,b)=>a+b.length,0),'条')}
     ${statsCard('完成率',list.length?Math.round(done/list.length*100)+'%':'--')}
   </div></div>
-  <div class="card"><h2>📋 今日待办</h2><div class="list">
-    ${list.length?list.map((p,i)=>`<div class="row ${p.done?'checked':''}">
+  <div class="card"><h2>📋 今日待办 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">点击展开详情</span></h2><div class="list">
+    ${list.length?list.map((p,i)=>{
+      const isOpen=openIdx.includes(i);
+      return `<div class="row clickable ${p.done?'checked':''} ${isOpen?'open':''}" data-a="expand" data-i="${i}">
+      <span class="caret">▾</span>
       ${p.pri?'<span class="tag">⭐优先</span>':''}
-      <div class="grow"><div class="t-main">${esc(p.t)}</div></div>
+      <div class="grow"><div class="t-main">${esc(p.t)}</div>
+        <div class="t-sub">${p.done?'✅ 已完成':'⏳ 待完成'}${p.note?' · 有备注':''}</div>
+        ${isOpen?`<div class="detail">
+          <div><b>内容：</b>${esc(p.t)}</div>
+          <div><b>状态：</b>${p.done?'已完成':'未完成'}</div>
+          <div><b>优先级：</b>${p.pri?'⭐ 优先':'普通'}</div>
+          <div><b>创建时间：</b>${p.at||'--'}</div>
+          ${p.note?`<div><b>备注：</b>${esc(p.note)}</div>`:''}
+          ${p.doneAt?`<div><b>完成于：</b>${p.doneAt}</div>`:''}
+        </div>`:''}
+      </div>
       <div class="ops">
         <button class="icon-btn ${p.done?'':'done-btn'}" data-a="toggle" data-i="${i}">${p.done?'↩':'✓'}</button>
         <button class="icon-btn" data-a="pri" data-i="${i}">⭐</button>
         <button class="icon-btn del" data-a="del" data-i="${i}">✕</button>
-      </div></div>`).join(''):'<div class="empty">今天还没有计划，添加一条吧 🌷</div>'}
+      </div></div>`;}).join(''):'<div class="empty">今天还没有计划，添加一条吧 🌷</div>'}
   </div>
-  <div class="form"><input id="planIn" placeholder="要做的最重要的事…"><select id="planPri" style="flex:0 0 76px;"><option value="">普通</option><option value="1">⭐优先</option></select><button class="btn-main" data-a="add">添加</button></div></div>
-  <div class="card"><h2>🗓️ 历史回看</h2><div class="list">
-    ${hist.length?hist.map(d=>{const l=DB.plans[d]||[];const dn=l.filter(p=>p.done).length;
-      return `<div class="row"><div class="grow"><div class="t-main">${d}</div><div class="t-sub">完成 ${dn}/${l.length}${l[0]?' · '+esc(l[0].t)+(l.length>1?' 等':''):''}</div></div></div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
-  </div></div>`;
+  <div class="form"><input id="planIn" placeholder="要做的最重要的事…"><select id="planPri" style="flex:0 0 76px;"><option value="">普通</option><option value="1">⭐优先</option></select><button class="btn-main" data-a="add">添加</button></div>
+  <div class="form"><input id="planNote" placeholder="备注（可选，记录细节）"></div></div>
+  <div class="card"><h2>🗓️ 历史回看 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${hist.length} 天</span></h2>
+  <div class="pill-row">${[['7','近7天'],['30','近30天'],['all','全部']].map(([v,n])=>`<div class="pill ${range===v?'active':''}" data-a="planRange" data-v="${v}">${n}</div>`).join('')}</div>
+  ${histList.length?histList.map(d=>{
+    const l=DB.plans[d]||[];const dn=l.filter(p=>p.done).length;
+    const isH=renderPlan._hd===d;
+    return `<div class="hist-item"><div class="h-head" data-a="planHist" data-d="${d}" style="cursor:pointer;">
+      <span>${d} <span style="font-size:11px;color:#c2899a;font-weight:400;">完成 ${dn}/${l.length}</span></span>
+      <span class="caret" style="transform:rotate(${isH?180:0}deg);">▾</span></div>
+      ${isH?`<div class="h-body">${l.map(p=>`<div class="${p.done?'done':'undone'}">${p.done?'✅':'⭕'} ${esc(p.t)}${p.pri?' ⭐':''}${p.note?' <span style="color:#c9a6b1;">('+esc(p.note)+')</span>':''}</div>`).join('')||'<div style="color:#d3a8b5;">当天无记录</div>'}</div>`:''}
+    </div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
+  </div>`;
 }
 
 /* ---- 每日运动 ---- */
@@ -780,26 +972,68 @@ function renderSave(){
   const saved=list.reduce((a,b)=>a+(+b.amount||0),0);
   let total=0;Object.values(DB.save).forEach(v=>{if(Array.isArray(v))v.forEach(x=>total+=+x.amount||0);});
   const goal=DB.save.goal||0;
+  const goalName=DB.save.goalName||'我的存钱目标';
+  const goalDate=DB.save.goalDate||'';
   const debts=DB.save.debts||[];
   const remain=debts.reduce((a,b)=>a+(+b.amount||0)-(+b.repaid||0),0);
   const pct=goal>0?Math.min(100,Math.round(total/goal*100)):0;
   const diff=goal>0?Math.max(0,goal-total):0;
+  // 进度环
+  const R=34,C=2*Math.PI*R,off=C-(pct/100)*C;
+  const daysLeft=goalDate?Math.ceil((new Date(goalDate)-new Date())/86400000):null;
   return `${moduleHeader(MODULES[9])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
     ${statsCard('今日存入','¥'+fmtN(saved))}${statsCard('累计存款','¥'+fmtN(total))}
     ${statsCard('剩余待还','¥'+fmtN(remain))}${statsCard('距目标还差','¥'+fmtN(diff))}
+  </div></div>
+  <div class="card"><h2>🎯 存钱目标进度</h2>
+    <div class="goal-card"><div class="ring">
+      <svg width="86" height="86" viewBox="0 0 86 86">
+        <circle cx="43" cy="43" r="${R}" fill="none" stroke="#fce4ec" stroke-width="9"/>
+        <circle cx="43" cy="43" r="${R}" fill="none" stroke="url(#g1)" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 43 43)"/>
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f9b8c9"/><stop offset="100%" stop-color="#f06a8a"/></linearGradient></defs>
+        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#f06a8a">${pct}%</text>
+      </svg>
+      <div style="flex:1;">
+        <div class="g-top">${esc(goalName)}</div>
+        <div class="g-sub">已存 ¥${fmtN(total)} / 目标 ¥${fmtN(goal||0)}</div>
+        <div class="g-sub">${goal?`还差 <b style="color:#f06a8a;">¥${fmtN(diff)}</b>`:'还没设置目标哦'}</div>
+        ${goalDate?`<div class="g-sub">🗓️ 目标日 ${goalDate}${daysLeft!==null?`（还剩 ${daysLeft} 天）`:''}</div>`:''}
+      </div>
+    </div></div>
+    <div class="form"><input id="svGoalName" placeholder="目标名称，如：旅行基金" value="${esc(goalName==='我的存钱目标'?'':goalName)}"><input id="svGoalDate" type="date" value="${goalDate}" style="flex:0 0 130px;"></div>
+    <div class="form"><input id="svGoal" type="number" placeholder="长期存钱目标 ¥" value="${goal||''}"><button class="btn-main" data-a="setGoal">设目标</button></div>
+    <div class="form"><input id="svDayGoal" type="number" placeholder="每日存钱小目标 ¥" value="${DB.save.dayGoal||''}"><button class="btn-main" data-a="setDayGoal" style="flex:0 0 110px;">设日目标</button></div>
   </div>
-  ${goal>0?`<div class="progress"><div style="width:${pct}%"></div></div><div class="progress-text">存钱目标 ¥${fmtN(goal)} · 已完成 ${pct}%</div>`:''}</div>
-  <div class="card"><h2>🪙 今日存钱</h2><div class="list">
-    ${list.length?list.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">¥${s.amount}</div></div><div class="ops"><button class="icon-btn del" data-a="delSave" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天存一笔，积少成多 🌱</div>'}
+  <div class="card"><h2>🪙 今日存入</h2><div class="list">
+    ${list.length?list.map((s,i)=>`<div class="row"><span class="tag">${esc(s.from||'未指定')}</span>
+      <div class="grow"><div class="t-main">¥${s.amount}</div><div class="t-sub">存入来源：${esc(s.from||'未指定')}${s.note?' · '+esc(s.note):''}</div></div>
+      <div class="ops"><button class="icon-btn del" data-a="delSave" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天存一笔，积少成多 🌱</div>'}
   </div>
-  <div class="form"><input id="svAmt" type="number" placeholder="存入金额 ¥"><button class="btn-main" data-a="addSave">存入</button></div>
-  <div class="form"><input id="svGoal" type="number" placeholder="长期存钱目标 ¥" value="${goal||''}"><button class="btn-main" data-a="setGoal">设目标</button></div></div>
-  <div class="card"><h2>💳 还钱记录</h2><div class="list">
-    ${debts.length?debts.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">${esc(s.name)}</div><div class="t-sub">总 ¥${s.amount} · 已还 ¥${s.repaid||0} · 剩 ¥${(+s.amount||0)-(+s.repaid||0)}</div></div>
-    <div class="ops"><button class="icon-btn done-btn" data-a="repay" data-i="${i}">还款</button><button class="icon-btn del" data-a="delDebt" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">暂无还钱记录</div>'}
+  <div class="form"><input id="svAmt" type="number" placeholder="存入金额 ¥" style="flex:0 0 110px;">
+    <select id="svFrom" style="flex:1;"><option>微信零钱</option><option>支付宝</option><option>银行卡</option><option>现金</option><option>工资卡</option><option>其他</option></select>
+    <button class="btn-main" data-a="addSave">存入</button></div>
+  <div class="form"><input id="svNote" placeholder="备注（可选）"></div></div>
+  <div class="card"><h2>💳 还钱管理 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${debts.length} 笔</span></h2>
+  <div class="list">
+    ${debts.length?debts.map((s,i)=>{
+      const left=(+s.amount||0)-(+s.repaid||0);const dp=+s.amount>0?Math.round((+s.repaid||0)/+s.amount*100):0;
+      const dl=s.due?Math.ceil((new Date(s.due)-new Date())/86400000):null;
+      return `<div class="row" style="display:block;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="grow"><div class="t-main">${esc(s.name)}</div>
+          <div class="t-sub">欠 <b style="color:#e87878;">¥${s.amount}</b> · 已还 ¥${s.repaid||0} · 剩 ¥${left}</div></div>
+          <div class="ops"><button class="icon-btn done-btn" data-a="repay" data-i="${i}">还</button><button class="icon-btn del" data-a="delDebt" data-i="${i}">✕</button></div>
+        </div>
+        <div class="progress" style="height:6px;margin-top:6px;"><div style="width:${dp}%"></div></div>
+        <div class="t-sub" style="margin-top:4px;">已还 ${dp}%${s.due?` · 还款日 ${s.due}${dl!==null?(dl<0?'（已逾期）':`（还剩 ${dl} 天）`):''}`:' · 未设还款日'}</div>
+        ${s.records&&s.records.length?`<div class="detail">${s.records.map(r=>`· ${r.date} 还 ¥${r.amt}`).join('<br>')}</div>`:''}
+      </div>`;}).join(''):'<div class="empty">暂无欠款记录</div>'}
   </div>
-  <div class="form"><input id="dbName" placeholder="欠款名称"><input id="dbAmt" type="number" placeholder="金额 ¥" style="flex:0 0 100px;"><button class="btn-main" data-a="addDebt">记欠款</button></div></div>`;
+  <div class="form"><input id="dbName" placeholder="还给谁/什么钱" style="flex:1 1 100%;"><input id="dbAmt" type="number" placeholder="欠款金额 ¥"></div>
+  <div class="form"><input id="dbDue" type="date" style="flex:1;"><button class="btn-main" data-a="addDebt">记欠款</button></div></div>`;
 }
 
 /* ---- 情商话术 ---- */
@@ -814,6 +1048,19 @@ const PHRASE_SEED=[
  {cat:'高情商回复',q:'别人自嘲时的高情商接话',a:'哪有呀，你这是凡尔赛，我可是很羡慕这个能力的。'},
  {cat:'高情商回复',q:'被夸奖时的回应',a:'谢谢！是你带得好/环境好，跟你合作我也学到很多。'},
  {cat:'高情商回复',q:'别人吐槽时先接情绪',a:'确实挺让人无语的，换成我我也会生气，你已经处理得很冷静了。'},
+ {cat:'职场',q:'提出不同意见时',a:'我理解你的思路，我这边有个补充角度，供你参考，最终你定。'},
+ {cat:'职场',q:'同事甩锅时',a:'这块当时的分工记录我这边有一份，我们一起对一下时间线，看是哪一环卡住了。'},
+ {cat:'职场',q:'请求资源支持',a:'这个事要做到预期效果，需要 A 和 B 两个支持，我可以先出方案，您看能不能帮忙推动？'},
+ {cat:'职场',q:'离职时体面表达',a:'很感谢这段经历带给我的成长，我会把手头工作整理成文档交接清楚，保证不影响团队节奏。'},
+ {cat:'人情往来',q:'朋友请客后想回报',a:'这次让你破费啦，下次我做东，正好有家店想带你去尝尝。'},
+ {cat:'人情往来',q:'亲戚打听收入',a:'够花够用，勉强糊口啦，倒是您最近身体怎么样？'},
+ {cat:'人情往来',q:'朋友情绪低落时',a:'我不太会说漂亮话，但你随时可以找我，我陪你待着也行。'},
+ {cat:'拒绝话术',q:'拒绝加班',a:'今天有个早就约好的家庭安排，实在走不开。这部分我明早提前到岗补上，保证不耽误进度。'},
+ {cat:'拒绝话术',q:'拒绝推销',a:'谢谢您，我这边暂时确实不需要，有需要我再联系您。'},
+ {cat:'拒绝话术',q:'拒绝不合理要求',a:'这个我没法答应你，但我可以帮你想想还有哪些办法，我们一起看看。'},
+ {cat:'高情商回复',q:'别人道歉时',a:'谢谢你能这么说，我心里舒服多了，这事我们翻篇。'},
+ {cat:'高情商回复',q:'被追问隐私',a:'这个说来话长哈哈，改天有空慢慢聊，先说说你最近怎么样？'},
+ {cat:'高情商回复',q:'化解尴尬冷场',a:'（笑）我们刚刚是不是同时在想下一句说什么？来，我先说。'},
 ];
 function renderTalk(){
   if(!DB.phrases.length)DB.phrases=[...PHRASE_SEED];
@@ -821,15 +1068,23 @@ function renderTalk(){
   const cats=['全部','职场','人情往来','拒绝话术','高情商回复'];
   const cur=renderTalk._cat||'全部';
   const list=DB.phrases.filter(p=>(cur==='全部'||p.cat===cur)&&(!kw||p.q.toLowerCase().includes(kw)||p.a.toLowerCase().includes(kw)));
+  // 今日推荐：按日期+轮换批次抽取 3 条，每天自动换
+  const batch=DB.talkBatch||0;
+  const todayPicks=pick(DB.phrases,3,(daySeed()%97)+batch*13);
   return `${moduleHeader(MODULES[10])}
+  <div class="card"><h2>🌟 今日推荐话术 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动更新</span></h2>
+  ${todayPicks.map(p=>`<div class="info-item"><div><span class="tag">${p.cat}</span><span class="i-title">${esc(p.q)}</span></div><div class="i-desc">${esc(p.a)}</div></div>`).join('')}
+  <div class="add-row"><button class="add-btn" data-a="talkShuffle">🔄 换一批</button></div>
+  <div class="hint">每天自动更换一批，看到喜欢的可以点下方「加入我的话术库」收进常用。</div></div>
   <div class="card"><h2>💬 话术素材库 <span style="font-size:11px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${DB.phrases.length} 条</span></h2>
   <input class="search-input" id="talkSearch" placeholder="🔍 搜索话术…" value="${esc(renderTalk._kw||'')}">
   <div class="pill-row">${cats.map(c=>`<div class="pill ${cur===c?'active':''}" data-cat="${c}">${c}</div>`).join('')}</div>
   <div class="list">
     ${list.length?list.map((p,i)=>`<div class="info-item"><div><span class="tag">${p.cat}</span><span class="i-title">${esc(p.q)}</span></div><div class="i-desc">${esc(p.a)}</div>
-    <div class="ops" style="margin-top:6px;"><button class="icon-btn del" data-a="delPh" data-i="${DB.phrases.indexOf(p)}">✕</button></div></div>`).join(''):'<div class="empty">没有匹配的话术</div>'}
+    <div class="ops" style="margin-top:6px;"><button class="icon-btn" data-a="copyPh" data-i="${DB.phrases.indexOf(p)}" title="复制">📋</button><button class="icon-btn del" data-a="delPh" data-i="${DB.phrases.indexOf(p)}">✕</button></div></div>`).join(''):'<div class="empty">没有匹配的话术</div>'}
   </div>
-  <div class="form"><input id="phQ" placeholder="场景，如：如何婉拒邀约"><input id="phA" placeholder="话术内容"><button class="btn-main" data-a="addPh">补充</button></div></div>`;
+  <div class="form"><input id="phQ" placeholder="场景，如：如何婉拒邀约"><input id="phA" placeholder="话术内容"><button class="btn-main" data-a="addPh">补充</button></div>
+  <div class="form"><select id="phCat" style="flex:0 0 110px;">${cats.slice(1).map(c=>`<option>${c}</option>`).join('')}</select><button class="btn-main" data-a="addPh" style="flex:1;">＋ 添加到我库</button></div></div>`;
 }
 
 /* ---- 黄金财经 ---- */
@@ -858,10 +1113,10 @@ function renderGold(){
 function esc(s){return String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
 
 document.getElementById('main').addEventListener('click',e=>{
+  const nc=e.target.closest('.nav-card');
+  if(nc){current=nc.dataset.id;render();return;}
   const btn=e.target.closest('[data-a]');
   if(btn){handleAction(btn);return;}
-  const nc=e.target.closest('.nav-card');
-  if(nc){current=nc.dataset.id;render();}
 });
 
 function handleAction(btn){
@@ -869,10 +1124,19 @@ function handleAction(btn){
   const g=id=>document.getElementById(id);
   switch(current+'/'+a){
     case 'home/x': break;
-    case 'plan/toggle':DB.plans[t][i].done=!DB.plans[t][i].done;save();render();break;
+    case 'home/homeTab':renderHome._tab=btn.dataset.v;render();break;
+    case 'home/goModule':current=btn.dataset.v;render();break;
+    case 'plan/toggle':{const it=DB.plans[t][i];it.done=!it.done;it.doneAt=it.done?new Date().toLocaleString('zh-CN',{hour12:false}):'';save();render();break;}
+    case 'plan/expand':{const arr=renderPlan._open||[];const k=arr.indexOf(i);if(k>=0)arr.splice(k,1);else arr.push(i);renderPlan._open=arr;render();break;}
+    case 'plan/planRange':renderPlan._range=btn.dataset.v;renderPlan._hd=null;render();break;
+    case 'plan/planHist':renderPlan._hd=renderPlan._hd===btn.dataset.d?null:btn.dataset.d;render();break;
     case 'plan/pri':DB.plans[t][i].pri=!DB.plans[t][i].pri;save();render();break;
     case 'plan/del':DB.plans[t].splice(i,1);save();render();break;
-    case 'plan/add':{const v=g('planIn').value.trim();if(!v)return toast('先写点什么吧 🌷');DB.plans[t]=DB.plans[t]||[];DB.plans[t].push({t:v,done:false,pri:g('planPri').value==='1'});save();render();break;}
+    case 'plan/add':{const v=g('planIn').value.trim();if(!v)return toast('先写点什么吧 🌷');
+      const noteEl=g('planNote');const note=noteEl?noteEl.value.trim():'';
+      DB.plans[t]=DB.plans[t]||[];
+      DB.plans[t].push({t:v,done:false,pri:g('planPri').value==='1',note,at:new Date().toLocaleString('zh-CN',{hour12:false})});
+      save();render();break;}
     case 'sport/del':DB.sports[t].splice(i,1);save();render();break;
     case 'sport/add':{const n=g('spName').value.trim();const m=+g('spMin').value,c=+g('spCal').value;if(!n||!m)return toast('填写项目和时长哦');DB.sports[t]=DB.sports[t]||[];DB.sports[t].push({name:n,min:m,cal:c||0});save();render();break;}
     case 'money/addSpend':{const amt=+g('finAmt').value;if(!amt)return toast('填一下金额呀');DB.finance[t]=DB.finance[t]||{list:[],save:0};DB.finance[t].list=DB.finance[t].list||[];DB.finance[t].list.push({amount:amt,type:g('finCat').value,note:g('finNote').value.trim()});save();render();break;}
@@ -885,12 +1149,38 @@ function handleAction(btn){
     case 'earn/add':{const app=g('emApp').value.trim();const got=+g('emGot').value||0;if(!app)return toast('填写软件名称哦');DB.money[t]=DB.money[t]||[];DB.money[t].push({app,got});save();render();break;}
     case 'earn/setGoal':{const v=+g('emGoal').value;if(!v)return toast('填一下目标金额');DB.money.goal=v;save();render();break;}
     case 'save/delSave':DB.save[t].splice(i,1);save();render();break;
-    case 'save/addSave':{const v=+g('svAmt').value;if(!v)return toast('填一下金额呀');DB.save[t]=DB.save[t]||[];DB.save[t].push({amount:v});save();render();break;}
-    case 'save/setGoal':{const v=+g('svGoal').value;if(!v)return toast('填一下目标金额');DB.save.goal=v;save();render();break;}
-    case 'save/addDebt':{const n=g('dbName').value.trim();const amt=+g('dbAmt').value;if(!n||!amt)return toast('填名称和金额哦');DB.save.debts=DB.save.debts||[];DB.save.debts.push({name:n,amount:amt,repaid:0});save();render();break;}
-    case 'save/repay':{const d2=DB.save.debts[i];const remain=(+d2.amount||0)-(+d2.repaid||0);const v=prompt(`「${d2.name}」本次还款金额（剩余 ¥${remain}）`,remain);if(v===null)break;const r=Math.max(0,Math.min(+v||0,remain));if(!r)break;d2.repaid=(+d2.repaid||0)+r;save();render();break;}
+    case 'save/addSave':{const v=+g('svAmt').value;if(!v)return toast('填一下金额呀');
+      const fromEl=g('svFrom');const noteEl=g('svNote');
+      DB.save[t]=DB.save[t]||[];
+      DB.save[t].push({amount:v,from:fromEl?fromEl.value:'其他',note:noteEl?noteEl.value.trim():''});
+      save();render();break;}
+    case 'save/setGoal':{const v=+g('svGoal').value;if(!v)return toast('填一下目标金额');
+      DB.save.goal=v;
+      const nm=g('svGoalName'),dt=g('svGoalDate');
+      if(nm&&nm.value.trim())DB.save.goalName=nm.value.trim();
+      if(dt&&dt.value)DB.save.goalDate=dt.value;
+      save();render();toast('目标已设定 🎯');break;}
+    case 'save/setDayGoal':{const v=+g('svDayGoal').value;if(!v)return toast('填一下每日目标金额');
+      DB.save.dayGoal=v;save();render();toast('每日小目标已设定 🌱');break;}
+    case 'save/addDebt':{const n=g('dbName').value.trim();const amt=+g('dbAmt').value;if(!n||!amt)return toast('填名称和金额哦');
+      const dueEl=g('dbDue');
+      DB.save.debts=DB.save.debts||[];
+      DB.save.debts.push({name:n,amount:amt,repaid:0,due:dueEl?dueEl.value:'',records:[]});
+      save();render();break;}
+    case 'save/repay':{const d2=DB.save.debts[i];const remain=(+d2.amount||0)-(+d2.repaid||0);
+      const v=prompt(`「${d2.name}」本次还款金额（剩余 ¥${remain}）`,remain);if(v===null)break;
+      const r=Math.max(0,Math.min(+v||0,remain));if(!r)break;
+      d2.repaid=(+d2.repaid||0)+r;
+      d2.records=d2.records||[];d2.records.push({date:new Date().toLocaleDateString('zh-CN'),amt:r});
+      save();render();
+      if((+d2.amount||0)-(+d2.repaid||0)<=0)toast('这笔还清啦，太棒了 🎉');break;}
     case 'save/delDebt':DB.save.debts.splice(i,1);save();render();break;
-    case 'talk/addPh':{const q=g('phQ').value.trim(),ans=g('phA').value.trim();if(!q||!ans)return toast('场景和内容都要填哦');DB.phrases.unshift({cat:current||'职场',q,a:ans});save();render();break;}
+    case 'talk/addPh':{const q=g('phQ').value.trim(),ans=g('phA').value.trim();if(!q||!ans)return toast('场景和内容都要填哦');
+      const catEl=g('phCat');const cat=catEl?catEl.value:(renderTalk._cat&&renderTalk._cat!=='全部'?renderTalk._cat:'职场');
+      DB.phrases.unshift({cat,q,a:ans,mine:true});save();render();toast('已加入话术库 🌸');break;}
+    case 'talk/talkShuffle':DB.talkBatch=(DB.talkBatch||0)+1;save();render();break;
+    case 'talk/copyPh':{const ph=DB.phrases[i];if(!ph)break;
+      try{navigator.clipboard.writeText(ph.a);toast('话术已复制 📋');}catch(e){toast('复制失败，请手动选择');}break;}
     case 'talk/delPh':DB.phrases.splice(i,1);save();render();break;
     case 'sync/saveCfg':{SYNC_CFG={url:g('cfgUrl').value.trim(),key:g('cfgKey').value.trim(),uid:g('cfgUid').value.trim()||'yunqi'};localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));logSync('⚙️ 已保存同步配置');render();toast('配置已保存');break;}
     case 'sync/pushNow':pushCloud();break;
@@ -907,6 +1197,10 @@ function handleAction(btn){
 document.addEventListener('click',e=>{
   const j=e.target.closest('.jump');
   if(j){e.preventDefault();doJump(j.dataset.p,j.dataset.k);return;}
+  const seg=e.target.closest('.seg-i');
+  if(seg){renderHome._tab=seg.dataset.v;render();return;}
+  const chip=e.target.closest('.chip[data-a]');
+  if(chip){handleAction(chip);return;}
   if(e.target.id==='checkinBtn'){
     const t=today();
     if(DB.checkin[t]){delete DB.checkin[t];toast('已撤回今日打卡');}
@@ -955,15 +1249,7 @@ fetchGold();
 setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
 
-/* 记住访问参数：start_url 已内置 sharecode；从主屏/其他入口打开时也自动补参数，保证永久可访问 */
-(function(){
-  var q=new URLSearchParams(location.search), c=q.get('sharecode');
-  if(c){localStorage.setItem('yunqi_invite',c);return;}
-  var saved=localStorage.getItem('yunqi_invite');
-  if(saved && !location.search){
-    location.replace(location.pathname+'?sharecode='+encodeURIComponent(saved));
-  }
-})();
+/* v2：不使用 Service Worker，避免缓存旧版本 */
 </script>
 </body>
 </html>

@@ -1996,7 +1996,7 @@ setInterval(()=>{
 
 /* 启动：渲染 + 开机自动拉取云端 */
 render();
-if(syncReady()){pullCloud(true);}
+if(syncReady()&&!cfgValid()){pullCloud(true);}   /* 仅配置合法时才自动拉取 */
 /* 实时金价：开机拉取 + 每 60 秒刷新一次 */
 fetchGold();
 setInterval(()=>{if(navigator.onLine)fetchGold();},60000);

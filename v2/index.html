@@ -187,9 +187,10 @@ header{text-align:center;padding:6px 0 4px;}
 }
 .stat .label{font-size:11px;color:#c4917f;font-weight:600;}
 .stat .num{font-size:22px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;
+  white-space:nowrap;letter-spacing:-.3px;
   background:linear-gradient(120deg,#d94e79 0%,#e07a4e 60%,#c98a12 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;}
-.stat .num small{font-size:11px;font-weight:600;}
+.stat .num small{font-size:10px;font-weight:600;white-space:nowrap;}
 /* 列表 */
 .list{display:flex;flex-direction:column;gap:8px;}
 .row{
@@ -733,8 +734,15 @@ let GOLD={
   ok:false,
   updating:false,
 };
-try{const c=JSON.parse(localStorage.getItem(GOLD_CACHE_KEY)||'null');if(c)GOLD={...GOLD,...c};}catch(e){}
-function saveGoldCache(){localStorage.setItem(GOLD_CACHE_KEY,JSON.stringify(GOLD));}
+try{
+  const c=JSON.parse(localStorage.getItem(GOLD_CACHE_KEY)||'null');
+  if(c)GOLD={...GOLD,...c};
+  // 关键：updating 不能被缓存持久化，否则页面被中断后永久卡在"获取中"
+  GOLD.updating=false;
+  // 缓存超过 30 分钟直接丢弃数字，避免展示严重过期的价格
+  if(GOLD._ts&&Date.now()-GOLD._ts>30*60*1000){GOLD.ok=false;}
+}catch(e){}
+function saveGoldCache(){const{cny,cnyChg,usd,usdChg,silver,silverCny,time,ok,date,_ts,fx,_fx,src}=GOLD;localStorage.setItem(GOLD_CACHE_KEY,JSON.stringify({cny,cnyChg,usd,usdChg,silver,silverCny,time,ok,date,_ts,fx,_fx,src}));}
 
 /* 带超时的 fetch（避免接口被墙时一直卡在"获取中"） */
 function fetchT(url,opt={},ms=4000){
@@ -746,8 +754,21 @@ function fetchT(url,opt={},ms=4000){
 function decodeGbk(buf){try{return new TextDecoder('gbk').decode(buf);}catch(e){return new TextDecoder().decode(buf);}}
 
 async function fetchGold(){
-  if(GOLD.updating)return false;
-  GOLD.updating=true;GOLD.err='';
+  if(GOLD.updating){
+    // 已有一次在跑：等它，但不无限等（防止上次被中断后锁死）
+    if(GOLD._lockAt&&Date.now()-GOLD._lockAt<15000)return false;
+    GOLD.updating=false;
+  }
+  GOLD.updating=true;GOLD._lockAt=Date.now();
+  GOLD.err='';
+  try{
+    return await fetchGoldBody();
+  }finally{
+    GOLD.updating=false;GOLD._lockAt=0;
+    if(current==='gold'||current==='home')render();
+  }
+}
+async function fetchGoldBody(){
   let got=false;
   /* ① 主源：腾讯行情（国内可直连 + 支持 CORS） */
   try{
@@ -811,8 +832,6 @@ async function fetchGold(){
     GOLD._ts=Date.now();
     saveGoldCache();
   }
-  GOLD.updating=false;
-  if(current==='gold'||current==='home')render();
   return got;
 }
 /* 缓存有效期：10 分钟内可离线展示 */
@@ -1728,17 +1747,18 @@ function renderGold(){
   const g=goldToday();
   const up=parseFloat(g.chg)>=0;
   const live=g.live;
-  const upd=live?(GOLD.date?GOLD.date.slice(5,16):g.date):(g.stale?'缓存·已过期':'未获取');
+  const hm=(s)=>{const m=String(s||'').match(/(\d{1,2}):(\d{2})/g);return m?m[m.length-1]:'--'};
+  const upd=live?`刚刚更新 ${hm(GOLD.date)}`:(g.stale?'⚠️ 缓存 '+(GOLD.date?String(GOLD.date).replace(/^\d{4}\//,''):''):'未获取');
   return `${moduleHeader(MODULES[11])}
   <div class="card"><h2>📈 实时金价 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${live?'🔴 实时':'⚪ 参考'} ${upd}</span></h2>
   <div class="stats">
     ${statsCard('国内金价','¥'+g.cny,'/克')}
-    ${statsCard('伦敦金','$'+g.usd,'/盎司')}
+    ${statsCard('伦敦金','$'+g.usd,'')}
     ${statsCard('今日涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
     ${statsCard('白银','¥'+(g.silver==='--'?'--':g.silver),'/克')}
   </div>
   <div class="form" style="margin-top:8px;"><button class="btn-main" data-a="refreshGold" style="flex:1;">🔄 刷新行情${GOLD.updating?' 获取中…':''}</button></div>
-  <div class="hint" style="text-align:center;">${live?`数据来源：${GOLD.src||'行情源'} · 汇率 ${GOLD.fx||'--'} · 行情时间 ${g.time||'--'}`:(g.stale?`⚠️ 当前为 ${GOLD.date} 的缓存数据，点击刷新获取最新`:('⚠️ 暂未获取到实时行情'+(GOLD.err?'（'+GOLD.err+'）':'')+'，点击上方按钮重试'))}</div></div>
+  <div class="hint" style="text-align:center;">${live?`✅ 实时行情 · 来源：${GOLD.src||'行情源'} · 汇率 ${GOLD.fx||'--'} · 交易所时间 ${g.time||'--'}（每分钟自动刷新）`:(g.stale?`⚠️ 当前为 ${GOLD.date} 的缓存数据，点击刷新获取最新`:('⚠️ 暂未获取到实时行情'+(GOLD.err?'（'+GOLD.err+'）':'')+'，已自动重试，也可点上方按钮'))}</div></div>
   <div class="card"><h2>📰 财经简要资讯</h2>
   ${pick(GOLD_NEWS,4).map(it=>`<div class="info-item"><div class="i-title">${it.title}</div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}</div>
   <div class="card"><h2>🌷 一句话解读</h2>
@@ -1997,10 +2017,22 @@ setInterval(()=>{
 /* 启动：渲染 + 开机自动拉取云端 */
 render();
 if(syncReady()&&!cfgValid()){pullCloud(true);}   /* 仅配置合法时才自动拉取 */
-/* 实时金价：开机拉取 + 每 60 秒刷新一次 */
-fetchGold();
-setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
+/* 实时金价：开机拉取 + 每 60 秒刷新 + 回前台刷新 + 网络恢复刷新 */
+let goldFails=0;
+async function refreshGoldLoop(){
+  if(!navigator.onLine)return;
+  const ok=await fetchGold();
+  if(ok){goldFails=0;}
+  else{
+    goldFails++;
+    // 失败后 20 秒、60 秒各重试一次，之后交给每分钟循环
+    if(goldFails<=2)setTimeout(()=>{if(navigator.onLine)refreshGoldLoop();},goldFails*20000);
+  }
+}
+refreshGoldLoop();
+setInterval(()=>{if(navigator.onLine)refreshGoldLoop();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)refreshGoldLoop();});
+window.addEventListener('online',()=>refreshGoldLoop());
 
 /* v2：不注册 Service Worker，避免缓存焊死 */
 </script>

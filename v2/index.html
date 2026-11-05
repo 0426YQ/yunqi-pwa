@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f06a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="云琪工作台">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<title>云琪工作台</title>
+<style>
+:root{
+  --pink:#f8c8d4;      /* 樱花粉 */
+  --pink-deep:#e88ca4; /* 浅玫红 */
+  --pink-rose:#f06a8a; /* 玫粉色按钮 */
+  --pink-bg:#fdf0f4;   /* 页面底色 */
+  --white:#ffffff;
+  --text:#8a5a68;
+  --text-dark:#6b4650;
+  --shadow:0 4px 14px rgba(232,140,164,.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",-apple-system,sans-serif;
+  background:linear-gradient(160deg,#fde8ef 0%,#fdf0f4 45%,#fef7f0 100%);
+  color:var(--text);
+  min-height:100vh;
+  font-size:15px;
+}
+/* ---------- 布局 ---------- */
+#app{display:flex;min-height:100vh;}
+/* 侧边竖向导航 */
+nav{
+  width:56px;
+  background:rgba(255,255,255,.75);
+  backdrop-filter:blur(8px);
+  border-right:1px solid rgba(248,200,212,.6);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:10px 0;
+  gap:2px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  flex-shrink:0;
+  z-index:20;
+}
+.nav-item{
+  width:44px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;border-radius:14px;
+  cursor:pointer;transition:.2s;
+  position:relative;
+}
+.nav-item:hover{background:#fdeef3;}
+.nav-item.active{background:linear-gradient(135deg,#f9b8c9,#f48fb1);box-shadow:var(--shadow);}
+.nav-logo{font-size:24px;margin-bottom:6px;}
+main{flex:1;padding:14px 14px 40px;max-width:520px;margin:0 auto;width:100%;}
+/* ---------- 顶部 ---------- */
+header{text-align:center;padding:6px 0 4px;}
+#clock{font-size:34px;font-weight:700;color:var(--text-dark);letter-spacing:2px;font-variant-numeric:tabular-nums;}
+#dateStr{font-size:13px;color:#c2899a;margin-top:2px;}
+.header-top{position:relative;}
+#checkinBtn{
+  position:absolute;top:0;right:0;
+  background:linear-gradient(135deg,#f06a8a,#e8547b);
+  color:#fff;border:none;border-radius:20px;
+  padding:8px 14px;font-size:13px;font-weight:600;
+  box-shadow:0 4px 12px rgba(240,106,138,.4);
+  cursor:pointer;
+}
+#checkinBtn.done{background:#c9c9c9;box-shadow:none;}
+/* 治愈文案 */
+.quote{
+  margin:12px 0 16px;
+  background:var(--white);
+  border-radius:18px;
+  padding:14px 16px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.quote .zh{font-size:14px;color:var(--text-dark);font-weight:600;}
+.quote .en{font-size:12px;color:#c2899a;margin-top:4px;font-style:italic;}
+/* ---------- 卡片 ---------- */
+.card{
+  background:var(--white);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:var(--shadow);
+  margin-bottom:14px;
+}
+.card h2{font-size:16px;color:var(--text-dark);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.page-title{font-size:20px;font-weight:700;color:var(--text-dark);margin:4px 0 12px;display:flex;align-items:center;gap:8px;}
+/* 数据卡片 4 宫格 */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+.stat{
+  background:linear-gradient(150deg,#fff5f8,#fdeef3);
+  border:1px solid rgba(248,200,212,.5);
+  border-radius:16px;
+  padding:12px;
+  text-align:center;
+}
+.stat .label{font-size:11px;color:#c2899a;}
+.stat .num{font-size:22px;font-weight:800;color:var(--pink-rose);margin-top:4px;font-variant-numeric:tabular-nums;}
+.stat .num small{font-size:11px;font-weight:600;}
+/* 列表 */
+.list{display:flex;flex-direction:column;gap:8px;}
+.row{
+  background:#fff8fa;
+  border:1px solid rgba(248,200,212,.45);
+  border-radius:14px;
+  padding:10px 12px;
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;
+  animation:fadeIn .25s;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.row .grow{flex:1;min-width:0;}
+.row .t-main{color:var(--text-dark);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.row .t-sub{font-size:11px;color:#c2899a;margin-top:2px;}
+.row .ops{display:flex;gap:6px;flex-shrink:0;}
+.icon-btn{
+  border:none;background:#fce4ec;color:#e88ca4;
+  width:26px;height:26px;border-radius:9px;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.icon-btn.del{background:#ffe3e3;color:#e87878;}
+.icon-btn.done-btn{background:#d9f2e4;color:#4caf7d;}
+/* 表单 */
+.form{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.form input,.form select,.form textarea{
+  border:1.5px solid rgba(248,200,212,.8);
+  border-radius:12px;padding:9px 10px;font-size:13px;
+  background:#fffafc;color:var(--text-dark);outline:none;
+  min-width:0;flex:1;
+}
+.form input:focus{border-color:var(--pink-deep);}
+.form .btn-main{
+  background:linear-gradient(135deg,#f9b8c9,#f48fb1);
+  color:#fff;border:none;border-radius:12px;padding:9px 16px;
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+}
+/* 添加按钮 */
+.add-row{display:flex;justify-content:center;margin-top:10px;}
+.add-btn{
+  background:var(--white);border:1.5px dashed var(--pink-deep);
+  color:var(--pink-deep);border-radius:14px;padding:9px 22px;
+  font-size:13px;font-weight:600;cursor:pointer;
+}
+.add-btn:active{background:#fdeef3;}
+/* 进度条 */
+.progress{height:10px;background:#fce4ec;border-radius:6px;overflow:hidden;margin-top:8px;}
+.progress>div{height:100%;background:linear-gradient(90deg,#f9b8c9,#f06a8a);border-radius:6px;transition:width .4s;}
+.progress-text{font-size:11px;color:#c2899a;margin-top:4px;text-align:center;}
+/* 标签 */
+.tag{display:inline-block;background:#fdeef3;color:var(--pink-deep);font-size:10px;padding:2px 8px;border-radius:8px;margin-right:6px;}
+.tag.src{background:#f0f4ff;color:#7a8ec9;}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.pill{
+  border:1px solid rgba(248,200,212,.8);background:#fff;
+  color:var(--text);border-radius:14px;padding:5px 12px;font-size:12px;cursor:pointer;
+}
+.pill.active{background:linear-gradient(135deg,#f9b8c9,#f48fb1);color:#fff;border-color:transparent;}
+/* 内容条目（资讯类） */
+.info-item{
+  background:#fff8fa;border-radius:14px;padding:10px 12px;margin-bottom:8px;
+  border:1px solid rgba(248,200,212,.45);
+}
+.info-item .i-title{font-size:13px;font-weight:700;color:var(--text-dark);}
+.info-item .i-desc{font-size:12px;color:#a97b8a;margin-top:3px;line-height:1.5;}
+.info-item .i-src{font-size:10px;color:#b9a0aa;margin-top:5px;}
+.jump-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.jump{background:#fdeef3;color:#e88ca4;font-size:11px;font-weight:600;text-decoration:none;
+  border:none;cursor:pointer;font-family:inherit;
+  border-radius:10px;padding:4px 10px;display:inline-block;}
+.jump:active{background:#f9d7e2;}
+.search-input{width:100%;border:1.5px solid rgba(248,200,212,.8);border-radius:12px;padding:9px 12px;font-size:13px;background:#fffafc;outline:none;margin-bottom:10px;}
+.empty{text-align:center;color:#d3a8b5;font-size:12px;padding:14px 0;}
+.toast{
+  position:fixed;left:50%;bottom:60px;transform:translateX(-50%);
+  background:rgba(107,70,80,.92);color:#fff;font-size:13px;
+  padding:10px 18px;border-radius:16px;z-index:99;
+  animation:fadeIn .2s;pointer-events:none;white-space:nowrap;
+}
+.hint{font-size:11px;color:#c9a6b1;margin-top:8px;line-height:1.6;}
+.checked .t-main{text-decoration:line-through;color:#c9a6b1;}
+.streak-badge{background:linear-gradient(135deg,#ffd3a5,#ff9a9e);color:#fff;font-size:11px;border-radius:10px;padding:3px 10px;font-weight:600;}
+.nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.nav-card{
+  background:linear-gradient(150deg,#fff5f8,#fdeef3);
+  border:1px solid rgba(248,200,212,.5);
+  border-radius:16px;padding:12px 6px;text-align:center;cursor:pointer;
+  transition:.15s;
+}
+.nav-card:active{transform:scale(.96);}
+.nav-card .e{font-size:24px;}
+.nav-card .n{font-size:11px;color:var(--text-dark);margin-top:6px;font-weight:600;}
+.nav-card .v{font-size:11px;color:var(--pink-rose);margin-top:3px;font-weight:700;}
+@media(min-width:600px){ main{max-width:560px;} }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script>
+/* ================= 云端同步（Supabase） ================= */
+const SYNC_CFG_KEY='yunqi_sync_cfg';
+let SYNC_CFG=JSON.parse(localStorage.getItem(SYNC_CFG_KEY)||'null')||{url:'',key:'',uid:'yunqi'};
+let SYNC_LOG=JSON.parse(localStorage.getItem('yunqi_sync_log')||'[]');
+let pushTimer=null;
+function logSync(msg,type='info'){
+  SYNC_LOG.unshift({time:new Date().toLocaleString('zh-CN',{hour12:false}),msg,type});
+  SYNC_LOG=SYNC_LOG.slice(0,60);
+  localStorage.setItem('yunqi_sync_log',JSON.stringify(SYNC_LOG));
+}
+function syncReady(){return SYNC_CFG.url&&SYNC_CFG.key;}
+async function pushCloud(silent){
+  if(!syncReady()){if(!silent)toast('请先在 ⚙️ 设置中配置 Supabase');return;}
+  try{
+    const res=await fetch(SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data',
+      {method:'POST',
+       headers:{'apikey':SYNC_CFG.key,'Authorization':'Bearer '+SYNC_CFG.key,
+        'Content-Type':'application/json','Prefer':'resolution=merge-deduplicate,return=minimal'},
+       body:JSON.stringify([{uid:SYNC_CFG.uid,data:DB,updated_at:new Date().toISOString(),device:navigator.userAgent.slice(0,60)}])});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    DB._lastPush=new Date().toISOString();saveLocal();
+    logSync('⬆️ 已上传本地数据到云端','ok');if(!silent)toast('已同步到云端 ☁️');
+  }catch(e){logSync('⬆️ 上传失败：'+e.message,'err');if(!silent)toast('同步失败：'+e.message);}
+}
+async function pullCloud(silent){
+  if(!syncReady()){if(!silent)toast('请先在 ⚙️ 设置中配置 Supabase');return;}
+  try{
+    const res=await fetch(SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data?uid=eq.'+encodeURIComponent(SYNC_CFG.uid)+'&order=updated_at.desc&limit=1',
+      {headers:{'apikey':SYNC_CFG.key,'Authorization':'Bearer '+SYNC_CFG.key}});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const rows=await res.json();
+    if(rows&&rows.length&&rows[0].data){
+      const cloud=rows[0].data, cloudT=rows[0].updated_at, localT=DB._lastPush||'';
+      if(cloudT>localT){
+        DB=cloud;saveLocal();logSync('⬇️ 从云端拉取数据（云端较新）','ok');render();
+        if(!silent)toast('已从云端同步最新数据 ☁️');
+      }else{
+        logSync('⬇️ 云端无更新（本地已是最新）');if(!silent)toast('本地已是最新 ✨');
+      }
+    }else{logSync('⬇️ 云端暂无数据，已上传本地','ok');await pushCloud(true);if(!silent)toast('云端为空，已上传本地数据');}
+  }catch(e){logSync('⬇️ 拉取失败：'+e.message,'err');if(!silent)toast('同步失败：'+e.message);}
+}
+function schedulePush(){ // 高频修改防抖：2.5s 合并一次上传
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>{if(navigator.onLine&&syncReady())pushCloud(true);else logSync('📴 离线中，数据已本地缓存，联网后自动上传');},2500);
+}
+window.addEventListener('online',()=>{logSync('🌐 网络已恢复，开始自动同步');pushCloud(true);});
+window.addEventListener('beforeunload',()=>{if(syncReady())navigator.sendBeacon&&navigator.sendBeacon(SYNC_CFG.url+'/rest/v1/yunqi_data',null);});
+
+/* ================= 数据存储（自动保存 + 离线缓存） ================= */
+const KEY='yunqi_workbench_v1';
+let DB=JSON.parse(localStorage.getItem(KEY)||'null')||{
+  checkin:{},           // 打卡 {date:true}
+  plans:{},             // {date:[{t,done,pri}]}
+  sports:{},            // {date:[{name,min,cal}]}
+  finance:{},           // {date:[{type,amount,note}],save:amount}
+  study:{},             // {date:[{cat,task,min}]}
+  money:{},             // {date:[{app,got}], goal}
+  save:{},              // {date:[{amount}], goal, target, debts:[{name,amount,repaid}]}
+  phrases:[],           // 话术
+};
+function saveLocal(){localStorage.setItem(KEY,JSON.stringify(DB));}
+function save(){ // 自动保存：本地缓存 + 防抖云同步
+  saveLocal();schedulePush();
+}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const fmtN=n=>{n=Number(n)||0;return n>=10000?(n/10000).toFixed(1)+'w':(Math.round(n*100)/100).toString();};
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1600);}
+
+/* ================= 模块定义 ================= */
+const MODULES=[
+ {id:'home',  icon:'🏠',name:'工作台', sub:'云琪工作台总览'},
+ {id:'plan',  icon:'📋',name:'每日计划', sub:'当天最重要的待办'},
+ {id:'sport', icon:'🏃',name:'每日运动', sub:'运动时长与卡路里'},
+ {id:'money', icon:'💰',name:'每日记账', sub:'开支与存钱流水'},
+ {id:'pod',   icon:'🎙️',name:'晨间播客', sub:'每日选题清单'},
+ {id:'study', icon:'📚',name:'每日学习', sub:'学习时长与鼓励'},
+ {id:'hot',   icon:'🔥',name:'热点话题', sub:'每日热点素材'},
+ {id:'ai',    icon:'✨',name:'AI 爆品', sub:'AI 工具与变现'},
+ {id:'earn',  icon:'💸',name:'赚钱',   sub:'赚钱打卡面板'},
+ {id:'save',  icon:'🪙',name:'存钱',   sub:'存款目标与还钱'},
+ {id:'talk',  icon:'💬',name:'情商话术', sub:'沟通话术素材库'},
+ {id:'gold',  icon:'📈',name:'黄金财经', sub:'金价与财经资讯'},
+ {id:'sync',  icon:'⚙️',name:'设置',   sub:'云端同步 · 日志'},
+];
+
+/* ---- 设置 / 云同步 ---- */
+function renderSync(){
+  const st=syncReady();
+  return `${moduleHeader(MODULES.find(m=>m.id==='sync'))}
+  <div class="card"><h2>☁️ 多端云同步（Supabase）</h2>
+  <div class="stats">
+    ${statsCard('同步状态',st?'已连接':'未配置')}
+    ${statsCard('本地缓存',st?'✅ 开启':'✅ 开启')}
+    ${statsCard('自动同步',st?'防抖 2.5s':'等待配置')}
+    ${statsCard('上次上传',(DB._lastPush?new Date(DB._lastPush).toLocaleTimeString('zh-CN',{hour12:false}):'--'))}
+  </div>
+  <div class="hint">📱 手机 / 💻 电脑 / 📟 平板使用同一 UID 即可数据互通：离线时写入本地缓存，联网自动上传下载，历史记录与台账永不删除。</div>
+  <div class="form" style="margin-top:10px;"><input id="cfgUrl" placeholder="Supabase 项目 URL（https://xxx.supabase.co）" value="${esc(SYNC_CFG.url)}"></div>
+  <div class="form"><input id="cfgKey" placeholder="Supabase anon key（公开密钥）" value="${esc(SYNC_CFG.key)}"></div>
+  <div class="form"><input id="cfgUid" placeholder="设备组 UID（同一 UID 的设备互通）" value="${esc(SYNC_CFG.uid)}"><button class="btn-main" data-a="saveCfg">保存配置</button></div>
+  <div class="form">
+    <button class="btn-main" data-a="pushNow" style="flex:1;">⬆️ 手动上传</button>
+    <button class="btn-main" data-a="pullNow" style="flex:1;">⬇️ 手动下载</button>
+  </div>
+  <div class="hint">💡 Supabase 中需建表：<b>yunqi_data</b>（字段：uid text 主键, data jsonb, updated_at timestamptz, device text），并开启 RLS 后添加「匿名可读写」策略。</div></div>
+  <div class="card"><h2>📜 同步日志 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">最近 ${SYNC_LOG.length} 条</span></h2>
+  <div class="list">
+    ${SYNC_LOG.length?SYNC_LOG.map(l=>`<div class="row"><div class="grow"><div class="t-main" style="font-weight:400;">${l.msg}</div><div class="t-sub">${l.time}</div></div></div>`).join(''):'<div class="empty">暂无同步记录</div>'}
+  </div>
+  <div class="add-row"><button class="add-btn" data-a="clearLog">清空日志</button></div></div>`;
+}
+
+/* ================= 跳转其他 App（平台搜索深链） ================= */
+const SEARCH_URLS={
+ '小红书':k=>'https://www.xiaohongshu.com/search_result?keyword='+encodeURIComponent(k),
+ '抖音':k=>'https://www.douyin.com/search/'+encodeURIComponent(k),
+ '微博':k=>'https://s.weibo.com/weibo?q='+encodeURIComponent(k),
+ '苹果播客':k=>'https://podcasts.apple.com/cn/search?term='+encodeURIComponent(k),
+ 'B站':k=>'https://search.bilibili.com/all?keyword='+encodeURIComponent(k),
+ '百度':k=>'https://www.baidu.com/s?wd='+encodeURIComponent(k),
+ '必应':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
+ '学习强国':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('学习强国 '+k),
+ '申材有道':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('申材有道 '+k),
+ '播客平台':k=>'https://podcasts.apple.com/cn/search?term='+encodeURIComponent(k),
+ '财经综合':k=>'https://www.baidu.com/s?wd='+encodeURIComponent('黄金金价 '+k),
+ '网络':k=>'https://www.bing.com/search?q='+encodeURIComponent(k),
+};
+/* 各平台 App 深链协议（装了 App 直接唤起搜索页） */
+const APP_SCHEMES={
+ '小红书':k=>'xhsdiscover://search/result?keyword='+encodeURIComponent(k),
+ '抖音':k=>'snssdk1128://search?keyword='+encodeURIComponent(k),
+ '微博':k=>'sinaweibo://searchall?q='+encodeURIComponent(k),
+ 'B站':k=>'bilibili://search?keyword='+encodeURIComponent(k),
+ '苹果播客':k=>'pcast://search?term='+encodeURIComponent(k),
+};
+/* 苹果播客：直接落到搜索页（避开加载慢的 Browse 首页） */
+const PODCAST_SEARCH='pcast://search';
+function jumpChips(src,kw){
+  let mains=[src];
+  if(src==='小红书')mains.push('抖音');
+  if(src==='抖音')mains.push('小红书');
+  if(src==='微博')mains.push('百度');
+  if(src==='播客平台'||src==='喜马拉雅')mains=['苹果播客','B站'];  // 播客：自带播客 + B站，两个都能用
+  if(src==='学习强国'||src==='申材有道')mains.push('必应');
+  if(src==='网络')mains.push('百度');
+  if(src==='财经综合')mains.push('必应');
+  return '<div class="jump-row">'+[...new Set(mains)].map(p=>
+    `<button class="jump" data-p="${p}" data-k="${esc(kw)}">🔍${p}</button>`).join('')+'</div>';
+}
+/* 点击：PWA 内先尝试唤起 App；回退时用「新窗口」打开真 Safari（iOS 通用链接会自动跳进 App） */
+function openInSafari(url){
+  const a=document.createElement('a');
+  a.href=url;a.target='_blank';a.rel='noopener';
+  document.body.appendChild(a);a.click();a.remove();
+}
+function doJump(p,k){
+  const web=SEARCH_URLS[p](k);
+  const scheme=(APP_SCHEMES[p]||(()=>null))(k);
+  /* 苹果播客网页版不接受搜索参数：先复制关键词，进入后长按搜索框粘贴即可 */
+  if(p==='苹果播客'){
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(k);}
+      else{const ta=document.createElement('textarea');ta.value=k;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+      toast('已复制关键词，点右上角搜索框粘贴 🎧');
+    }catch(e){}
+  }
+  let left=false;
+  const onHide=()=>{left=true;};
+  document.addEventListener('visibilitychange',onHide,{once:true});
+  if(scheme){
+    const t=Date.now();
+    window.location.href=scheme;
+    setTimeout(()=>{
+      document.removeEventListener('visibilitychange',onHide);
+      if(!document.hidden && Date.now()-t<2600 && !left){
+        openInSafari(web); // 新窗口=Safari，通用链接会尝试跳进 App
+      }
+    },1200);
+  }else{
+    openInSafari(web);
+  }
+}
+
+/* ================= 治愈文案（随机） ================= */
+const QUOTES=[
+ ['慢慢来，你种的花会如期盛开。','Bloom at your own pace; your flowers will arrive on time.'],
+ ['今天也是被自己温柔以待的一天。','Today, be gentle and kind to yourself.'],
+ ['星光不问赶路人，时光不负有心人。','The stars never question the striving heart.'],
+ ['每一个小小的坚持，都在悄悄发光。','Every small effort quietly shines.'],
+ ['把日子过成喜欢的样子，一步一步来。','Shape your days slowly into what you love.'],
+ ['风会带走疲惫，留下轻盈的你。','Let the wind carry your tiredness away.'],
+ ['你比昨天更接近梦想一点点了。','You are one step closer than yesterday.'],
+ ['认真生活的你，本身就很浪漫。','Living earnestly is already romantic.'],
+ ['别急，花开有期，好运在路上。','No rush — blossoms and luck are on their way.'],
+ ['今天的你，也值得一句：辛苦啦。','Today you deserve a gentle “well done”.'],
+];
+
+/* ================= 联网内容（每日种子 + 内置清单） ================= */
+function daySeed(){let s=0,d=today();for(const c of d)s=(s*31+c.charCodeAt(0))%99991;return s;}
+function pick(arr,n,extra){const s=daySeed()+(extra||0)*7919;const a=[...arr];const out=[];let x=s;while(out.length<Math.min(n,a.length)){x=(x*9301+49297)%233280;const i=x%a.length;out.push(a.splice(i,1)[0]);}return out;}
+/* 换一批计数器（每个联网板块独立） */
+const SHUFFLE={pod:0,hot:0,ai:0};
+const POD_TOPICS=[
+ {cat:'赚钱搞钱',title:'普通人副业冷启动：从 0 到第一笔收入',desc:'聊一聊下班后的 2 小时如何变成现金流，适合晨间听思路。',src:'小红书'},
+ {cat:'赚钱搞钱',title:'信息差变现：身边的生意为什么有人闷声赚',desc:'拆解三个低门槛信息差案例，听完记下你能复刻的一个。',src:'播客平台'},
+ {cat:'考公考编',title:'申论大作文万能结构：开头三句定基调',desc:'适合通勤晨听，边听边在脑中搭一遍文章骨架。',src:'抖音'},
+ {cat:'考公考编',title:'行测数量关系蒙题技巧盘点',desc:'考前急救向，把高频秒杀技巧过一遍。',src:'微博'},
+ {cat:'写小说素材',title:'古言权谋台词感：如何写出「绵里藏针」',desc:'积累对话张力写法，附三个可套用的对峙场景模板。',src:'小红书'},
+ {cat:'写小说素材',title:'都市文金手指设定避坑清单',desc:'盘点读者最反感的五种开挂方式，帮你避开雷区。',src:'播客平台'},
+ {cat:'全网热点',title:'本周全网热议话题速览',desc:'一分钟了解社交媒体讨论度最高的事件与争议点。',src:'微博'},
+ {cat:'全网热点',title:'热点背后的传播学：为什么它火了',desc:'用传播规律拆热点，顺便积累素材观点。',src:'播客平台'},
+ {cat:'历史学习',title:'五代十国的乱世逻辑十分钟速览',desc:'碎片时间补历史脉络，晨听十分钟完成一块拼图。',src:'播客平台'},
+ {cat:'英语学习',title:'晨间英语磨耳朵：日常高频地道表达',desc:'10 组老外真的会用的表达，跟读一遍开启语感。',src:'播客平台'},
+];
+const HOT_ITEMS=[
+ {cat:'写作素材',title:'「长期主义」正在成为新热词',desc:'可用于议论型作文与文案：慢下来、深耕、复利思维。',src:'申材有道'},
+ {cat:'答题素材',title:'基层治理与数字化服务的结合案例',desc:'申论对策题好素材：小切口、大民生、数据多跑路。',src:'学习强国'},
+ {cat:'情绪共鸣',title:'「公园二十分钟效应」持续走红',desc:'都市人的自我修复话题，适合情感类与生活类内容。',src:'小红书'},
+ {cat:'写作素材',title:'AI 与普通人的关系讨论升温',desc:'从「替代焦虑」到「使用差距」，观点新且易展开。',src:'抖音'},
+ {cat:'答题素材',title:'青年就业观变化：求稳与求新并存',desc:'可用于申论综合分析题，正反两面都有支撑材料。',src:'学习强国'},
+ {cat:'生活观察',title:'「反向消费」与性价比经济',desc:'年轻人理性消费话题，做选题、写文案都好用。',src:'抖音'},
+];
+const AI_ITEMS=[
+ {cat:'AI 工具',title:'全能型 AI 助手持续迭代',desc:'写作、画图、做表格一站搞定，普通人提效首选。',src:'网络'},
+ {cat:'AI 玩法',title:'AI 生成表情包 / 头像小生意',desc:'用 AI 出图 + 社群接单，轻成本试水的流量玩法。',src:'小红书'},
+ {cat:'流量爆品',title:'「AI 翻译老剧」二创账号起号思路',desc:'搬运改造 + AI 配音字幕，热点流量池稳定。',src:'抖音'},
+ {cat:'AI 变现',title:'AI 简历优化服务：单价 9.9~39 元',desc:'模板化交付，适合学生群体客源，可跑通小闭环。',src:'网络'},
+ {cat:'AI 工具',title:'AI 长文转脑图工具走红',desc:'把报告一键转可视化结构图，职场人付费意愿强。',src:'网络'},
+ {cat:'AI 变现',title:'AI 儿童绘本定制：先接单再生成',desc:'家长圈需求稳定，讲故事 + 配图一条龙交付。',src:'小红书'},
+];
+const GOLD_NEWS=[
+ {title:'金价震荡整理，短线上下两难',desc:'市场等待新的方向信号，建议分批操作、不追单边。',src:'财经综合'},
+ {title:'央行购金潮延续，长期支撑仍在',desc:'各国央行持续增持黄金，为金价提供长期底部支撑。',src:'财经综合'},
+ {title:'美元走势成为金价核心变量',desc:'美元偏弱时金价通常走强，关注汇率数据发布节奏。',src:'财经综合'},
+ {title:'首饰金价与投资金价差异需留意',desc:'金饰品含工费溢价，投资保值优先看投资金条价格。',src:'财经综合'},
+];
+/* ================= 实时金价（新浪财经行情接口） ================= */
+const GOLD_CACHE_KEY='yunqi_gold_cache';
+let GOLD={
+  cny:'--',          // 沪金99 元/克
+  cnyChg:'0',
+  usd:'--',          // 伦敦金 美元/盎司
+  usdChg:'0',
+  silver:'--',       // 伦敦银 美元/盎司
+  silverCny:'--',    // 折合 元/克
+  time:'',           // 行情时间
+  ok:false,
+  updating:false,
+};
+try{const c=JSON.parse(localStorage.getItem(GOLD_CACHE_KEY)||'null');if(c)GOLD={...GOLD,...c};}catch(e){}
+function saveGoldCache(){localStorage.setItem(GOLD_CACHE_KEY,JSON.stringify(GOLD));}
+
+/* 带超时的 fetch（避免接口被墙时一直卡在"获取中"） */
+function fetchT(url,opt={},ms=4000){
+  return Promise.race([
+    fetch(url,{...opt,cache:'no-store'}),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('超时')),ms))
+  ]);
+}
+function decodeGbk(buf){try{return new TextDecoder('gbk').decode(buf);}catch(e){return new TextDecoder().decode(buf);}}
+
+async function fetchGold(){
+  if(GOLD.updating)return false;
+  GOLD.updating=true;GOLD.err='';
+  let got=false;
+  /* ① 主源：腾讯行情（国内可直连 + 支持 CORS） */
+  try{
+    const r=await fetchT('https://qt.gtimg.cn/q=hf_XAU,hf_XAG');
+    const buf=await r.arrayBuffer();
+    const txt=decodeGbk(buf);
+    const grab=c=>{const m=txt.match(new RegExp('v_'+c+'="([^"]*)"'));return m?m[1].split(','):null;};
+    const xau=grab('hf_XAU'),xag=grab('hf_XAG');
+    if(xau&&+xau[0]>0){
+      GOLD.usd=(+xau[0]).toFixed(2);
+      GOLD.usdChg=(+xau[1]||0).toFixed(2);
+      GOLD.time=xau[6]||'';
+      if(xag&&+xag[0]>0)GOLD.silver=(+xag[0]).toFixed(2);
+      // 腾讯返回已含涨跌幅百分比
+      GOLD.pct=GOLD.usdChg;
+      got=true;GOLD.src='腾讯财经';
+    }
+  }catch(e){GOLD.err='主源'+e.message;}
+  /* ② 汇率：jsDelivr（国内友好）→ er-api */
+  let fx=0;
+  if(got){
+    for(const u of [
+      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+      'https://open.er-api.com/v6/latest/USD']){
+      try{
+        const r=await fetchT(u,{},3500);
+        const j=await r.json();
+        fx=(j.usd&&j.usd.cny)?+j.usd.cny:(j.rates&&j.rates.CNY?+j.rates.CNY:0);
+        if(fx>0)break;
+      }catch(e){}
+    }
+    if(!fx&&+GOLD._fx>0)fx=+GOLD._fx;
+    if(!fx)fx=7.1;
+    GOLD.fx=fx.toFixed(3);GOLD._fx=fx;
+    const perG=+GOLD.usd/31.1035*fx;      // 国际金价折合元/克
+    GOLD.cny=(perG*1.006).toFixed(2);     // 加国内溢价
+    GOLD.cnyChg=GOLD.usdChg||'0.00';
+    if(GOLD.silver&&+GOLD.silver>0)GOLD.silverCny=((+GOLD.silver)/31.1035*fx).toFixed(2);
+  }
+  /* ③ 备用源：gold-api.com（若主源失败） */
+  if(!got){
+    try{
+      const r=await fetchT('https://api.gold-api.com/price/XAU',{},4000);
+      const j=await r.json();
+      if(j&&+j.price>0){
+        GOLD.usd=(+j.price).toFixed(2);
+        let f=0;
+        try{const fr=await fetchT('https://open.er-api.com/v6/latest/USD',{},3500);
+          const fj=await fr.json();f=fj.rates&&fj.rates.CNY?+fj.rates.CNY:0;}catch(e){}
+        if(!f)f=+GOLD._fx||7.1;
+        GOLD.fx=f.toFixed(3);GOLD._fx=f;
+        GOLD.cny=((+j.price)/31.1035*f*1.006).toFixed(2);
+        GOLD.time='实时';got=true;GOLD.src='gold-api';
+      }
+    }catch(e){GOLD.err=(GOLD.err?GOLD.err+'；':'')+'备用源'+e.message;}
+  }
+
+  if(got){
+    GOLD.ok=true;
+    GOLD.date=new Date().toLocaleString('zh-CN',{hour12:false});
+    GOLD._ts=Date.now();
+    saveGoldCache();
+  }
+  GOLD.updating=false;
+  if(current==='gold'||current==='home')render();
+  return got;
+}
+/* 缓存有效期：10 分钟内可离线展示 */
+function goldFresh(){return GOLD.ok&&GOLD._ts&&(Date.now()-GOLD._ts)<10*60*1000;}
+/* 兜底：无网络时用日期种子展示参考值 */
+function goldToday(){
+  const fresh=goldFresh();
+  if(GOLD.ok)return{
+    cny:GOLD.cny,usd:GOLD.usd,silver:GOLD.silverCny||'--',chg:GOLD.cnyChg||'0.00',
+    date:GOLD.date||today(),live:fresh,time:GOLD.time||'',stale:GOLD.ok&&!fresh,
+  };
+  const s=daySeed();
+  return{cny:(612.5+((s*7)%11-5)*0.9).toFixed(2),usd:'--',silver:'--',chg:'0.00',
+    date:today(),live:false};
+}
+
+/* ================= 侧边导航 ================= */
+let current='home';
+function renderNav(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML='<div class="nav-logo">🌸</div>'+MODULES.map(m=>
+    `<div class="nav-item ${current===m.id?'active':''}" data-id="${m.id}" title="${m.name}">${m.icon}</div>`).join('');
+  nav.querySelectorAll('.nav-item').forEach(el=>el.onclick=()=>{current=el.dataset.id;render();window.scrollTo(0,0);});
+}
+
+/* ================= 页面渲染 ================= */
+function statsCard(label,num,unit){return `<div class="stat"><div class="label">${label}</div><div class="num">${num}${unit?`<small> ${unit}</small>`:''}</div></div>`;}
+function checkinStreak(){
+  let n=0;const d=new Date();
+  while(true){const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(DB.checkin[s]){n++;d.setDate(d.getDate()-1);}else break;}
+  return n;
+}
+function moduleHeader(m){return `<div class="page-title">${m.icon} ${m.name}<span style="font-size:11px;color:#c9a6b1;font-weight:400;margin-left:auto;">${m.sub}</span></div>`;}
+
+function renderHome(){
+  const t=today();
+  const plans=(DB.plans[t]||[]);const done=plans.filter(p=>p.done).length;
+  const sports=(DB.sports[t]||[]);const sportMin=sports.reduce((a,b)=>a+(+b.min||0),0);
+  const fin=DB.finance[t]||{list:[],save:0};const spend=(fin.list||[]).reduce((a,b)=>a+(+b.amount||0),0);
+  const study=(DB.study[t]||[]);const studyMin=study.reduce((a,b)=>a+(+b.min||0),0);
+  const earn=(DB.money[t]||[]);const got=earn.reduce((a,b)=>a+(+b.got||0),0);
+  const sv=(DB.save[t]||[]);const saved=sv.reduce((a,b)=>a+(+b.amount||0),0);
+  const streak=checkinStreak();
+  const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  const g=goldToday();
+  return `
+  <header class="header-top">
+    <div id="clock">${new Date().toTimeString().slice(0,8)}</div>
+    <div id="dateStr">${t} · 星期${'日一二三四五六'[new Date().getDay()]}</div>
+    <button id="checkinBtn" class="${DB.checkin[t]?'done':''}">${DB.checkin[t]?'✓ 已打卡':'今日打卡'}</button>
+  </header>
+  <div class="quote"><div class="zh">🌸 ${q[0]}</div><div class="en">${q[1]}</div></div>
+  <div class="card"><h2>🌸 今日概览</h2>
+    <div class="stats">
+      ${statsCard('✅ 计划完成',done+'/'+plans.length)}
+      ${statsCard('🏃 运动时长',sportMin,'分钟')}
+      ${statsCard('💰 今日开支','¥'+fmtN(spend))}
+      ${statsCard('📚 学习时长',studyMin,'分钟')}
+      ${statsCard('💸 今日收益','¥'+fmtN(got))}
+      ${statsCard('🪙 今日存入','¥'+fmtN(saved))}
+      ${statsCard('🔥 连续打卡',streak,'天')}
+      ${statsCard('📈 国内金价','¥'+g.cny,'/克')}
+    </div>
+    <div class="hint">点击下方卡片进入对应栏目，查看详情与录入。</div>
+    <div class="nav-grid" style="margin-top:12px;">
+      ${MODULES.filter(m=>m.id!=='home').map(m=>{
+        let v='';
+        if(m.id==='plan')v=done+'/'+plans.length;
+        if(m.id==='sport')v=sportMin+'分钟';
+        if(m.id==='money')v='¥'+fmtN(spend);
+        if(m.id==='study')v=studyMin+'分钟';
+        if(m.id==='earn')v='¥'+fmtN(got);
+        if(m.id==='save')v='¥'+fmtN(saved);
+        return `<div class="nav-card" data-id="${m.id}"><div class="e">${m.icon}</div><div class="n">${m.name}</div><div class="v">${v}</div></div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---- 每日计划 ---- */
+function renderPlan(){
+  const t=today();const list=DB.plans[t]||[];
+  const done=list.filter(p=>p.done).length;
+  const hist=Object.keys(DB.plans).sort().reverse().slice(0,7);
+  return `${moduleHeader(MODULES[1])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日完成',done)}
+    ${statsCard('未完成',list.length-done)}
+    ${statsCard('累计记录',Object.values(DB.plans).reduce((a,b)=>a+b.length,0),'条')}
+    ${statsCard('完成率',list.length?Math.round(done/list.length*100)+'%':'--')}
+  </div></div>
+  <div class="card"><h2>📋 今日待办</h2><div class="list">
+    ${list.length?list.map((p,i)=>`<div class="row ${p.done?'checked':''}">
+      ${p.pri?'<span class="tag">⭐优先</span>':''}
+      <div class="grow"><div class="t-main">${esc(p.t)}</div></div>
+      <div class="ops">
+        <button class="icon-btn ${p.done?'':'done-btn'}" data-a="toggle" data-i="${i}">${p.done?'↩':'✓'}</button>
+        <button class="icon-btn" data-a="pri" data-i="${i}">⭐</button>
+        <button class="icon-btn del" data-a="del" data-i="${i}">✕</button>
+      </div></div>`).join(''):'<div class="empty">今天还没有计划，添加一条吧 🌷</div>'}
+  </div>
+  <div class="form"><input id="planIn" placeholder="要做的最重要的事…"><select id="planPri" style="flex:0 0 76px;"><option value="">普通</option><option value="1">⭐优先</option></select><button class="btn-main" data-a="add">添加</button></div></div>
+  <div class="card"><h2>🗓️ 历史回看</h2><div class="list">
+    ${hist.length?hist.map(d=>{const l=DB.plans[d]||[];const dn=l.filter(p=>p.done).length;
+      return `<div class="row"><div class="grow"><div class="t-main">${d}</div><div class="t-sub">完成 ${dn}/${l.length}${l[0]?' · '+esc(l[0].t)+(l.length>1?' 等':''):''}</div></div></div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
+  </div></div>`;
+}
+
+/* ---- 每日运动 ---- */
+function renderSport(){
+  const t=today();const list=DB.sports[t]||[];
+  const min=list.reduce((a,b)=>a+(+b.min||0),0), cal=list.reduce((a,b)=>a+(+b.cal||0),0);
+  let tMin=0,tCal=0,days=0;const ds=Object.keys(DB.sports).sort();
+  ds.forEach(d=>{DB.sports[d].forEach(x=>{tMin+=+x.min||0;tCal+=+x.cal||0;});});
+  const d2=new Date();while(DB.sports[fmtD(d2)]){days++;d2.setDate(d2.getDate()-1);}
+  function fmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  return `${moduleHeader(MODULES[2])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日总时长',min,'分钟')}${statsCard('今日消耗',cal,'千卡')}
+    ${statsCard('累计时长',tMin,'分钟')}${statsCard('累计消耗',fmtN(tCal),'千卡')}
+  </div><div style="text-align:center;"><span class="streak-badge">🔥 连续运动打卡 ${days} 天</span></div></div>
+  <div class="card"><h2>🏃 今日记录</h2><div class="list">
+    ${list.length?list.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">${esc(s.name)}</div><div class="t-sub">${s.min} 分钟 · ${s.cal} 千卡</div></div>
+      <div class="ops"><button class="icon-btn del" data-a="del" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天还没运动哦，动起来 🏃‍♀️</div>'}
+  </div>
+  <div class="form"><input id="spName" placeholder="运动项目，如慢跑"><input id="spMin" type="number" placeholder="分钟" style="flex:0 0 70px;"><input id="spCal" type="number" placeholder="千卡" style="flex:0 0 70px;"><button class="btn-main" data-a="add">录入</button></div></div>`;
+}
+
+/* ---- 每日记账 ---- */
+const FIN_CATS=['餐饮','购物','交通','居住','娱乐','医疗','其他'];
+function renderFinance(){
+  const t=today();const rec=DB.finance[t]||{list:[],save:0};
+  const spend=(rec.list||[]).reduce((a,b)=>a+(+b.amount||0),0);
+  let tSpend=0,tSave=0;
+  Object.values(DB.finance).forEach(r=>{tSpend+=(r.list||[]).reduce((a,b)=>a+(+b.amount||0),0);tSave+=+r.save||0;});
+  return `${moduleHeader(MODULES[3])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日开支','¥'+fmtN(spend))}${statsCard('今日存入','¥'+fmtN(rec.save||0))}
+    ${statsCard('累计开支','¥'+fmtN(tSpend))}${statsCard('累计存钱','¥'+fmtN(tSave))}
+  </div></div>
+  <div class="card"><h2>➖ 记一笔支出</h2>
+    <div class="form"><input id="finAmt" type="number" placeholder="金额 ¥"><select id="finCat" style="flex:0 0 84px;">${FIN_CATS.map(c=>`<option>${c}</option>`).join('')}</select><input id="finNote" placeholder="备注(可选)"><button class="btn-main" data-a="addSpend">支出</button></div>
+    <div class="form"><input id="finSave" type="number" placeholder="今日存钱金额 ¥"><button class="btn-main" data-a="addSave">💰 存钱</button></div></div>
+  <div class="card"><h2>🧾 今日流水</h2><div class="list">
+    ${(rec.list||[]).length?rec.list.map((f,i)=>`<div class="row"><span class="tag">${f.type}</span><div class="grow"><div class="t-main">¥${f.amount}</div>${f.note?`<div class="t-sub">${esc(f.note)}</div>`:''}</div>
+    <div class="ops"><button class="icon-btn del" data-a="delSpend" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天还没有支出记录</div>'}
+  </div></div>`;
+}
+
+/* ---- 晨间播客 ---- */
+function renderPod(){
+  const items=pick(POD_TOPICS,6,SHUFFLE.pod);
+  return `${moduleHeader(MODULES[4])}
+  <div class="card"><h2>🎙️ 今日晨间选题 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">覆盖：赚钱搞钱 · 考公考编 · 写小说素材 · 全网热点 · 历史 · 英语。点🔍按钮可跳转到对应 App 或网页搜索。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
+}
+
+/* ---- 每日学习 ---- */
+const LEARN_STREAKS=['今天也是闪闪发光的一天呀 ✨','学到的都是自己的，了不起！🌸','坚持的每一天都在悄悄变强 💪','小小的积累，会变成大大的惊喜 🌷','为认真学习的你鼓掌 👏'];
+const STUDY_CATS=['考公考编','英语','小说写作','历史','专业','其他'];
+function renderStudy(){
+  const t=today();const list=DB.study[t]||[];
+  const min=list.reduce((a,b)=>a+(+b.min||0),0);
+  let tMin=0,days=0;
+  Object.values(DB.study).forEach(l=>l.forEach(x=>tMin+=+x.min||0));
+  const d=new Date();const fmtD=d2=>d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
+  while(DB.study[fmtD(d)]&&DB.study[fmtD(d)].length){days++;d.setDate(d.getDate()-1);}
+  const hist=Object.keys(DB.study).sort().reverse().slice(0,7);
+  return `${moduleHeader(MODULES[5])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日总时长',min,'分钟')}${statsCard('今日任务数',list.length,'项')}
+    ${statsCard('累计总时长',tMin,'分钟')}${statsCard('累计打卡',days,'天')}
+  </div></div>
+  <div class="card"><h2>📚 今日学习任务</h2><div class="list">
+    ${list.length?list.map((s,i)=>`<div class="row"><span class="tag">${esc(s.cat)}</span><div class="grow"><div class="t-main">${esc(s.task)}</div><div class="t-sub">${s.min} 分钟</div></div>
+    <div class="ops"><button class="icon-btn del" data-a="del" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">添加今天的第一个学习任务吧 📖</div>'}
+  </div>
+  <div class="form"><input id="stTask" placeholder="学习内容"><select id="stCat" style="flex:0 0 96px;">${STUDY_CATS.map(c=>`<option>${c}</option>`).join('')}</select><input id="stMin" type="number" placeholder="分钟" style="flex:0 0 70px;"><button class="btn-main" data-a="add">录入</button></div></div>
+  ${list.length?`<div class="card"><h2>🌷 今日鼓励</h2><div style="text-align:center;font-size:14px;color:var(--text-dark);padding:6px 0;">${LEARN_STREAKS[daySeed()%LEARN_STREAKS.length]}</div></div>`:''}
+  <div class="card"><h2>🗓️ 历史复盘</h2><div class="list">
+    ${hist.length?hist.map(d2=>{const l=DB.study[d2]||[];const m=l.reduce((a,b)=>a+(+b.min||0),0);
+      return `<div class="row"><div class="grow"><div class="t-main">${d2}</div><div class="t-sub">${l.length} 项 · 共 ${m} 分钟${l[0]?' · '+esc(l[0].task)+(l.length>1?' 等':''):''}</div></div></div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
+  </div></div>`;
+}
+
+/* ---- 热点话题 ---- */
+function renderHot(){
+  const items=pick(HOT_ITEMS,5,SHUFFLE.hot);
+  const cats=['全部',...new Set(HOT_ITEMS.map(i=>i.cat))];
+  return `${moduleHeader(MODULES[6])}
+  <div class="card"><h2>🔥 每日热点素材 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">来源覆盖：申材有道 · 抖音 · 小红书 · 学习强国。按话题分类整理，点🔍按钮跳转查看完整内容。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
+}
+
+/* ---- AI 爆品 ---- */
+function renderAI(){
+  const items=pick(AI_ITEMS,5,SHUFFLE.ai);
+  return `${moduleHeader(MODULES[7])}
+  <div class="card"><h2>✨ 今日 AI 爆品清单 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">每日自动刷新</span></h2>
+  ${items.map(it=>`<div class="info-item"><div><span class="tag">${it.cat}</span><span class="i-title">${it.title}</span></div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div>${jumpChips(it.src,it.title)}</div>`).join('')}
+  <div class="hint">板块内容：AI 爆款工具 · AI 玩法 · 流量爆品思路 · 可落地变现项目。点🔍按钮跳转搜索实操案例。</div>
+  <div class="add-row"><button class="add-btn" data-a="shuffle">🔄 换一批</button></div></div>`;
+}
+
+/* ---- 赚钱 ---- */
+function renderEarn(){
+  const t=today();const list=DB.money[t]||[];
+  const got=list.reduce((a,b)=>a+(+b.got||0),0);
+  const goal=DB.money.goal||50;
+  let total=0,days=0;
+  Object.values(DB.money).forEach(v=>{if(typeof v==='object'&&Array.isArray(v))v.forEach(x=>total+=+x.got||0);});
+  const d=new Date();const fmtD=d2=>d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
+  while(DB.money[fmtD(d)]&&DB.money[fmtD(d)].length){days++;d.setDate(d.getDate()-1);}
+  const pct=Math.min(100,Math.round(got/goal*100));
+  return `${moduleHeader(MODULES[8])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日目标','¥'+fmtN(goal))}${statsCard('今日到手','¥'+fmtN(got))}
+    ${statsCard('累计总收益','¥'+fmtN(total))}${statsCard('连续打卡',days,'天')}
+  </div>
+  <div class="progress"><div style="width:${pct}%"></div></div><div class="progress-text">今日目标进度 ${pct}% ${pct>=100?'· 已达成 🎉':''}</div></div>
+  <div class="card"><h2>💸 赚钱打卡</h2><div class="list">
+    ${list.length?list.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">${esc(s.app)}</div><div class="t-sub">今日到手 ¥${s.got}</div></div>
+    <div class="ops"><button class="icon-btn" data-a="check" data-i="${i}" title="打卡">✓</button><button class="icon-btn del" data-a="del" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">添加你正在用的赚钱软件吧</div>'}
+  </div>
+  <div class="form"><input id="emApp" placeholder="赚钱软件名称"><input id="emGot" type="number" placeholder="今日到手 ¥" style="flex:0 0 100px;"><button class="btn-main" data-a="add">打卡</button></div>
+  <div class="form"><input id="emGoal" type="number" placeholder="设置每日目标金额 ¥" value="${goal||''}"><button class="btn-main" data-a="setGoal">设目标</button></div></div>`;
+}
+
+/* ---- 存钱 ---- */
+function renderSave(){
+  const t=today();const list=DB.save[t]||[];
+  const saved=list.reduce((a,b)=>a+(+b.amount||0),0);
+  let total=0;Object.values(DB.save).forEach(v=>{if(Array.isArray(v))v.forEach(x=>total+=+x.amount||0);});
+  const goal=DB.save.goal||0;
+  const debts=DB.save.debts||[];
+  const remain=debts.reduce((a,b)=>a+(+b.amount||0)-(+b.repaid||0),0);
+  const pct=goal>0?Math.min(100,Math.round(total/goal*100)):0;
+  const diff=goal>0?Math.max(0,goal-total):0;
+  return `${moduleHeader(MODULES[9])}
+  <div class="card"><h2>📊 数据</h2><div class="stats">
+    ${statsCard('今日存入','¥'+fmtN(saved))}${statsCard('累计存款','¥'+fmtN(total))}
+    ${statsCard('剩余待还','¥'+fmtN(remain))}${statsCard('距目标还差','¥'+fmtN(diff))}
+  </div>
+  ${goal>0?`<div class="progress"><div style="width:${pct}%"></div></div><div class="progress-text">存钱目标 ¥${fmtN(goal)} · 已完成 ${pct}%</div>`:''}</div>
+  <div class="card"><h2>🪙 今日存钱</h2><div class="list">
+    ${list.length?list.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">¥${s.amount}</div></div><div class="ops"><button class="icon-btn del" data-a="delSave" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天存一笔，积少成多 🌱</div>'}
+  </div>
+  <div class="form"><input id="svAmt" type="number" placeholder="存入金额 ¥"><button class="btn-main" data-a="addSave">存入</button></div>
+  <div class="form"><input id="svGoal" type="number" placeholder="长期存钱目标 ¥" value="${goal||''}"><button class="btn-main" data-a="setGoal">设目标</button></div></div>
+  <div class="card"><h2>💳 还钱记录</h2><div class="list">
+    ${debts.length?debts.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">${esc(s.name)}</div><div class="t-sub">总 ¥${s.amount} · 已还 ¥${s.repaid||0} · 剩 ¥${(+s.amount||0)-(+s.repaid||0)}</div></div>
+    <div class="ops"><button class="icon-btn done-btn" data-a="repay" data-i="${i}">还款</button><button class="icon-btn del" data-a="delDebt" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">暂无还钱记录</div>'}
+  </div>
+  <div class="form"><input id="dbName" placeholder="欠款名称"><input id="dbAmt" type="number" placeholder="金额 ¥" style="flex:0 0 100px;"><button class="btn-main" data-a="addDebt">记欠款</button></div></div>`;
+}
+
+/* ---- 情商话术 ---- */
+const PHRASE_SEED=[
+ {cat:'职场',q:'领导安排超出职责的任务时',a:'好的领导，我先梳理下手头优先级，确认下时间节点，保证高质量交付。'},
+ {cat:'职场',q:'汇报进展时的万能句式',a:'目前完成了 X，正在进行 Y，预计 Z 时间交付，有一个小风险我建议这样处理…'},
+ {cat:'职场',q:'被当众批评如何体面回应',a:'谢谢您指出来，这块我确实考虑不够周全，我马上调整，今天下班前同步您改进结果。'},
+ {cat:'人情往来',q:'收到礼物时的回应',a:'太懂我了！收到特别喜欢，改天请你吃饭，这份心意我记下啦。'},
+ {cat:'人情往来',q:'婉拒帮忙但不伤感情',a:'我最近手头这个项目正在冲刺，实在腾不出精力，怕耽误你，帮你问问有没有合适的人？'},
+ {cat:'拒绝话术',q:'拒绝借钱',a:'不好意思，我的钱都在定期和理财里，动不了。你要是急用，我帮你想想别的办法。'},
+ {cat:'拒绝话术',q:'拒绝无效社交邀约',a:'最近在闭关赶进度，等我忙完这阵，一定专门约你好好聚！'},
+ {cat:'高情商回复',q:'别人自嘲时的高情商接话',a:'哪有呀，你这是凡尔赛，我可是很羡慕这个能力的。'},
+ {cat:'高情商回复',q:'被夸奖时的回应',a:'谢谢！是你带得好/环境好，跟你合作我也学到很多。'},
+ {cat:'高情商回复',q:'别人吐槽时先接情绪',a:'确实挺让人无语的，换成我我也会生气，你已经处理得很冷静了。'},
+];
+function renderTalk(){
+  if(!DB.phrases.length)DB.phrases=[...PHRASE_SEED];
+  const kw=(renderTalk._kw||'').toLowerCase();
+  const cats=['全部','职场','人情往来','拒绝话术','高情商回复'];
+  const cur=renderTalk._cat||'全部';
+  const list=DB.phrases.filter(p=>(cur==='全部'||p.cat===cur)&&(!kw||p.q.toLowerCase().includes(kw)||p.a.toLowerCase().includes(kw)));
+  return `${moduleHeader(MODULES[10])}
+  <div class="card"><h2>💬 话术素材库 <span style="font-size:11px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${DB.phrases.length} 条</span></h2>
+  <input class="search-input" id="talkSearch" placeholder="🔍 搜索话术…" value="${esc(renderTalk._kw||'')}">
+  <div class="pill-row">${cats.map(c=>`<div class="pill ${cur===c?'active':''}" data-cat="${c}">${c}</div>`).join('')}</div>
+  <div class="list">
+    ${list.length?list.map((p,i)=>`<div class="info-item"><div><span class="tag">${p.cat}</span><span class="i-title">${esc(p.q)}</span></div><div class="i-desc">${esc(p.a)}</div>
+    <div class="ops" style="margin-top:6px;"><button class="icon-btn del" data-a="delPh" data-i="${DB.phrases.indexOf(p)}">✕</button></div></div>`).join(''):'<div class="empty">没有匹配的话术</div>'}
+  </div>
+  <div class="form"><input id="phQ" placeholder="场景，如：如何婉拒邀约"><input id="phA" placeholder="话术内容"><button class="btn-main" data-a="addPh">补充</button></div></div>`;
+}
+
+/* ---- 黄金财经 ---- */
+function renderGold(){
+  const g=goldToday();
+  const up=parseFloat(g.chg)>=0;
+  const live=g.live;
+  const upd=live?(GOLD.date?GOLD.date.slice(5,16):g.date):(g.stale?'缓存·已过期':'未获取');
+  return `${moduleHeader(MODULES[11])}
+  <div class="card"><h2>📈 实时金价 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${live?'🔴 实时':'⚪ 参考'} ${upd}</span></h2>
+  <div class="stats">
+    ${statsCard('国内金价','¥'+g.cny,'/克')}
+    ${statsCard('伦敦金','$'+g.usd,'/盎司')}
+    ${statsCard('今日涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
+    ${statsCard('白银','¥'+(g.silver==='--'?'--':g.silver),'/克')}
+  </div>
+  <div class="form" style="margin-top:8px;"><button class="btn-main" data-a="refreshGold" style="flex:1;">🔄 刷新行情${GOLD.updating?' 获取中…':''}</button></div>
+  <div class="hint" style="text-align:center;">${live?`数据来源：${GOLD.src||'行情源'} · 汇率 ${GOLD.fx||'--'} · 行情时间 ${g.time||'--'}`:(g.stale?`⚠️ 当前为 ${GOLD.date} 的缓存数据，点击刷新获取最新`:('⚠️ 暂未获取到实时行情'+(GOLD.err?'（'+GOLD.err+'）':'')+'，点击上方按钮重试'))}</div></div>
+  <div class="card"><h2>📰 财经简要资讯</h2>
+  ${pick(GOLD_NEWS,4).map(it=>`<div class="info-item"><div class="i-title">${it.title}</div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}</div>
+  <div class="card"><h2>🌷 一句话解读</h2>
+  <div style="font-size:13px;color:var(--text-dark);line-height:1.7;padding:2px 0;">金价短期看美元脸色，长期看央行的态度。普通人买金饰重在喜欢、买金条才谈保值；不要追涨杀跌，分批买入更安心。</div></div>`;
+}
+
+/* ================= 事件处理 ================= */
+function esc(s){return String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+
+document.getElementById('main').addEventListener('click',e=>{
+  const btn=e.target.closest('[data-a]');
+  if(btn){handleAction(btn);return;}
+  const nc=e.target.closest('.nav-card');
+  if(nc){current=nc.dataset.id;render();}
+});
+
+function handleAction(btn){
+  const a=btn.dataset.a,i=+btn.dataset.i,t=today();
+  const g=id=>document.getElementById(id);
+  switch(current+'/'+a){
+    case 'home/x': break;
+    case 'plan/toggle':DB.plans[t][i].done=!DB.plans[t][i].done;save();render();break;
+    case 'plan/pri':DB.plans[t][i].pri=!DB.plans[t][i].pri;save();render();break;
+    case 'plan/del':DB.plans[t].splice(i,1);save();render();break;
+    case 'plan/add':{const v=g('planIn').value.trim();if(!v)return toast('先写点什么吧 🌷');DB.plans[t]=DB.plans[t]||[];DB.plans[t].push({t:v,done:false,pri:g('planPri').value==='1'});save();render();break;}
+    case 'sport/del':DB.sports[t].splice(i,1);save();render();break;
+    case 'sport/add':{const n=g('spName').value.trim();const m=+g('spMin').value,c=+g('spCal').value;if(!n||!m)return toast('填写项目和时长哦');DB.sports[t]=DB.sports[t]||[];DB.sports[t].push({name:n,min:m,cal:c||0});save();render();break;}
+    case 'money/addSpend':{const amt=+g('finAmt').value;if(!amt)return toast('填一下金额呀');DB.finance[t]=DB.finance[t]||{list:[],save:0};DB.finance[t].list=DB.finance[t].list||[];DB.finance[t].list.push({amount:amt,type:g('finCat').value,note:g('finNote').value.trim()});save();render();break;}
+    case 'money/addSave':{const amt=+g('finSave').value;if(!amt)return toast('填一下金额呀');DB.finance[t]=DB.finance[t]||{list:[],save:0};DB.finance[t].save=(+DB.finance[t].save||0)+amt;save();render();break;}
+    case 'money/delSpend':{DB.finance[t].list.splice(i,1);save();render();break;}
+    case 'study/del':DB.study[t].splice(i,1);save();render();break;
+    case 'study/add':{const v=g('stTask').value.trim();const m=+g('stMin').value;if(!v||!m)return toast('填内容和时长哦');DB.study[t]=DB.study[t]||[];DB.study[t].push({cat:g('stCat').value,task:v,min:m});save();render();toast('学完啦，你真棒 🌸');break;}
+    case 'earn/del':DB.money[t].splice(i,1);save();render();break;
+    case 'earn/check':DB.money[t][i].got=DB.money[t][i].got||0;DB.money[t][i].done=!DB.money[t][i].done;save();render();toast('打卡成功 💪');break;
+    case 'earn/add':{const app=g('emApp').value.trim();const got=+g('emGot').value||0;if(!app)return toast('填写软件名称哦');DB.money[t]=DB.money[t]||[];DB.money[t].push({app,got});save();render();break;}
+    case 'earn/setGoal':{const v=+g('emGoal').value;if(!v)return toast('填一下目标金额');DB.money.goal=v;save();render();break;}
+    case 'save/delSave':DB.save[t].splice(i,1);save();render();break;
+    case 'save/addSave':{const v=+g('svAmt').value;if(!v)return toast('填一下金额呀');DB.save[t]=DB.save[t]||[];DB.save[t].push({amount:v});save();render();break;}
+    case 'save/setGoal':{const v=+g('svGoal').value;if(!v)return toast('填一下目标金额');DB.save.goal=v;save();render();break;}
+    case 'save/addDebt':{const n=g('dbName').value.trim();const amt=+g('dbAmt').value;if(!n||!amt)return toast('填名称和金额哦');DB.save.debts=DB.save.debts||[];DB.save.debts.push({name:n,amount:amt,repaid:0});save();render();break;}
+    case 'save/repay':{const d2=DB.save.debts[i];const remain=(+d2.amount||0)-(+d2.repaid||0);const v=prompt(`「${d2.name}」本次还款金额（剩余 ¥${remain}）`,remain);if(v===null)break;const r=Math.max(0,Math.min(+v||0,remain));if(!r)break;d2.repaid=(+d2.repaid||0)+r;save();render();break;}
+    case 'save/delDebt':DB.save.debts.splice(i,1);save();render();break;
+    case 'talk/addPh':{const q=g('phQ').value.trim(),ans=g('phA').value.trim();if(!q||!ans)return toast('场景和内容都要填哦');DB.phrases.unshift({cat:current||'职场',q,a:ans});save();render();break;}
+    case 'talk/delPh':DB.phrases.splice(i,1);save();render();break;
+    case 'sync/saveCfg':{SYNC_CFG={url:g('cfgUrl').value.trim(),key:g('cfgKey').value.trim(),uid:g('cfgUid').value.trim()||'yunqi'};localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));logSync('⚙️ 已保存同步配置');render();toast('配置已保存');break;}
+    case 'sync/pushNow':pushCloud();break;
+    case 'sync/pullNow':pullCloud();break;
+    case 'sync/clearLog':SYNC_LOG=[];localStorage.setItem('yunqi_sync_log','[]');render();break;
+    case 'gold/refreshGold':toast('正在获取实时行情…');fetchGold().then(ok=>{if(!ok)toast('获取失败，请检查网络');});break;
+    case 'pod/shuffle':SHUFFLE.pod++;render();break;
+    case 'hot/shuffle':SHUFFLE.hot++;render();break;
+    case 'ai/shuffle':SHUFFLE.ai++;render();break;
+  }
+}
+
+/* 其他交互：打卡按钮 / 搜索 / 分类 */
+document.addEventListener('click',e=>{
+  const j=e.target.closest('.jump');
+  if(j){e.preventDefault();doJump(j.dataset.p,j.dataset.k);return;}
+  if(e.target.id==='checkinBtn'){
+    const t=today();
+    if(DB.checkin[t]){delete DB.checkin[t];toast('已撤回今日打卡');}
+    else{DB.checkin[t]=true;toast('打卡成功，今天也超棒 🌸');}
+    save();render();
+  }
+  const pill=e.target.closest('.pill');
+  if(pill){renderTalk._cat=pill.dataset.cat;render();}
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='talkSearch'){renderTalk._kw=e.target.value;
+    const list=document.getElementById('main');
+    // 仅重渲染列表区域，避免输入框失焦
+    setTimeout(()=>{const kw=renderTalk._kw;const main=document.getElementById('main');
+      // 简化：重建整个页面但恢复焦点
+      const pos=e.target.selectionStart;render();
+      const inp=document.getElementById('talkSearch');if(inp){inp.focus();inp.setSelectionRange(pos,pos);}},0);
+  }
+});
+
+/* ================= 主渲染 ================= */
+function render(){
+  renderNav();
+  const m=document.getElementById('main');
+  const map={home:renderHome,plan:renderPlan,sport:renderSport,money:renderFinance,pod:renderPod,study:renderStudy,hot:renderHot,ai:renderAI,earn:renderEarn,save:renderSave,talk:renderTalk,gold:renderGold,sync:renderSync};
+  m.innerHTML=map[current]();
+}
+
+/* 时钟 + 每日零点自动刷新（跨天后自动切换当日模块，历史记录保留） */
+let _curDate=today();
+setInterval(()=>{
+  const c=document.getElementById('clock');
+  if(c)c.textContent=new Date().toTimeString().slice(0,8);
+  if(today()!==_curDate){
+    _curDate=today();
+    render();
+    toast('🌅 新的一天开始啦，今日模块已自动刷新');
+  }
+},1000);
+
+/* 启动：渲染 + 开机自动拉取云端 */
+render();
+if(syncReady()){pullCloud(true);}
+/* 实时金价：开机拉取 + 每 60 秒刷新一次 */
+fetchGold();
+setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
+
+/* 记住访问参数：start_url 已内置 sharecode；从主屏/其他入口打开时也自动补参数，保证永久可访问 */
+(function(){
+  var q=new URLSearchParams(location.search), c=q.get('sharecode');
+  if(c){localStorage.setItem('yunqi_invite',c);return;}
+  var saved=localStorage.getItem('yunqi_invite');
+  if(saved && !location.search){
+    location.replace(location.pathname+'?sharecode='+encodeURIComponent(saved));
+  }
+})();
+</script>
+</body>
+</html>

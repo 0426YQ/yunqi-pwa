@@ -1,5 +1,5 @@
 /* 云琪工作台 Service Worker：网络优先，离线回退缓存（保证每次打开都是最新版） */
-const CACHE = 'yunqi-pwa-v11';
+const CACHE = 'yunqi-pwa-v12';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

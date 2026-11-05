@@ -220,6 +220,24 @@ header{text-align:center;padding:6px 0 4px;}
   min-width:0;flex:1;font-family:inherit;
 }
 .form input:focus,.form select:focus,.form textarea:focus{border-color:#f5a8bf;box-shadow:0 0 0 3px rgba(245,168,191,.16);}
+/* 同步配置输入框：保证长按能选中、能粘贴 */
+.form input.cfg-in{
+  -webkit-user-select:text;user-select:text;
+  -webkit-touch-callout:default;touch-action:manipulation;
+  font-size:12px;letter-spacing:0;
+}
+.paste-btn{
+  flex:none;width:40px;border:1.5px solid rgba(255,188,132,.8);border-radius:13px;
+  background:linear-gradient(150deg,#fffdf9,#fff4e6);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0;
+}
+.paste-btn:active{transform:scale(.94);}
+.btn-mini{
+  border:1.5px dashed rgba(238,111,146,.55);border-radius:13px;
+  background:linear-gradient(150deg,#fff7fb,#fff3ea);color:#d9638a;
+  font-size:12px;font-weight:600;padding:9px 10px;cursor:pointer;font-family:inherit;
+}
+.btn-mini:active{transform:scale(.97);}
 .form .btn-main,.btn-main{
   background:linear-gradient(135deg,#ee6f96 0%,#f4846f 52%,#ffb037 100%);
   color:#fff;border:none;border-radius:13px;padding:9px 16px;
@@ -375,20 +393,54 @@ function logSync(msg,type='info'){
   localStorage.setItem('yunqi_sync_log',JSON.stringify(SYNC_LOG));
 }
 function syncReady(){return SYNC_CFG.url&&SYNC_CFG.key;}
+/* 设定页单个输入框的粘贴：优先读剪贴板，失败则聚焦并提示长按粘贴 */
+function fillCfgField(id,key){
+  const el=document.getElementById(id);
+  const apply=t=>{
+    const v=(t||'').trim();
+    if(!v){toast('剪贴板是空的');return;}
+    renderSync[key]=v.replace(/\s/g,'');
+    render();toast('已粘贴');
+  };
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    navigator.clipboard.readText().then(apply).catch(()=>{
+      if(el){el.focus();el.select&&el.select();}
+      toast('长按输入框 → 粘贴');
+    });
+  }else{
+    if(el){el.focus();el.select&&el.select();}
+    toast('长按输入框 → 粘贴');
+  }
+}
 async function pushCloud(silent){
   if(!syncReady()){if(!silent)toast('请先在 ⚙️ 设置中配置 Supabase');return;}
   try{
-    const res=await fetch(SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data',
-      {method:'POST',
-       headers:{'apikey':SYNC_CFG.key,'Authorization':'Bearer '+SYNC_CFG.key,
-        'Content-Type':'application/json','Prefer':'resolution=merge-deduplicate,return=minimal'},
-       body:JSON.stringify([{uid:SYNC_CFG.uid,data:DB,updated_at:new Date().toISOString(),device:navigator.userAgent.slice(0,60)}])});
-    if(!res.ok)throw new Error('HTTP '+res.status);
+    const base=SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data';
+    const hdr={'apikey':SYNC_CFG.key,'Authorization':'Bearer '+SYNC_CFG.key,'Content-Type':'application/json'};
+    const row={uid:SYNC_CFG.uid,data:DB,updated_at:new Date().toISOString(),device:navigator.userAgent.slice(0,60)};
+    // 先尝试 upsert（覆盖同 uid 记录）
+    let res=await fetch(base,{method:'POST',
+      headers:Object.assign({},hdr,{'Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body:JSON.stringify([row])});
+    // 409/23505 = 主键冲突（该 PostgREST 不支持自动 upsert）→ 改用 PATCH 更新
+    if(res.status===409){
+      res=await fetch(base+'?uid=eq.'+encodeURIComponent(SYNC_CFG.uid),
+        {method:'PATCH',headers:Object.assign({},hdr,{'Prefer':'return=minimal'}),body:JSON.stringify(row)});
+      // PATCH 未命中任何行（404/204 但无更新）→ 回退 INSERT
+      if(res.ok){
+        const chk=await fetch(base+'?select=uid&uid=eq.'+encodeURIComponent(SYNC_CFG.uid),{headers:hdr});
+        const arr=await chk.json().catch(()=>[]);
+        if(!Array.isArray(arr)||!arr.length){
+          res=await fetch(base,{method:'POST',headers:Object.assign({},hdr,{'Prefer':'return=minimal'}),body:JSON.stringify([row])});
+        }
+      }
+    }
+    if(!res.ok)throw new Error('HTTP '+res.status+(res.status===401?'（Key 不正确或已失效）':res.status===404?'（表 yunqi_data 不存在）':''));
     DB._lastPush=new Date().toISOString();saveLocal();
     logSync('⬆️ 已上传本地数据到云端','ok');if(!silent)toast('已同步到云端 ☁️');
   }catch(e){logSync('⬆️ 上传失败：'+e.message,'err');if(!silent)toast('同步失败：'+e.message);}
 }
-async function pullCloud(silent){
+async function pullCloud(silent,force){
   if(!syncReady()){if(!silent)toast('请先在 ⚙️ 设置中配置 Supabase');return;}
   try{
     const res=await fetch(SYNC_CFG.url.replace(/\/$/,'')+'/rest/v1/yunqi_data?uid=eq.'+encodeURIComponent(SYNC_CFG.uid)+'&order=updated_at.desc&limit=1',
@@ -396,9 +448,13 @@ async function pullCloud(silent){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const rows=await res.json();
     if(rows&&rows.length&&rows[0].data){
-      const cloud=rows[0].data, cloudT=rows[0].updated_at, localT=DB._lastPush||'';
-      if(cloudT>localT){
-        DB=cloud;saveLocal();logSync('⬇️ 从云端拉取数据（云端较新）','ok');render();
+      const cloud=rows[0].data;
+      const cloudT=Date.parse(rows[0].updated_at||0)||0;      // 统一转时间戳比较，避免 ISO 时区格式差异
+      const localT=Date.parse(DB._lastPush||0)||0;
+      if(force||cloudT>localT){
+        const keepPush=DB._lastPush;
+        DB=cloud;DB._lastPush=cloudT?(new Date(cloudT)).toISOString():keepPush;
+        saveLocal();logSync('⬇️ 从云端拉取数据'+(force?'（手动覆盖本地）':'（云端较新）'),'ok');render();
         if(!silent)toast('已从云端同步最新数据 ☁️');
       }else{
         logSync('⬇️ 云端无更新（本地已是最新）');if(!silent)toast('本地已是最新 ✨');
@@ -462,9 +518,13 @@ function renderSync(){
     ${statsCard('上次上传',(DB._lastPush?new Date(DB._lastPush).toLocaleTimeString('zh-CN',{hour12:false}):'--'))}
   </div>
   <div class="hint">📱 手机 / 💻 电脑 / 📟 平板使用同一 UID 即可数据互通：离线时写入本地缓存，联网自动上传下载，历史记录与台账永不删除。</div>
-  <div class="form" style="margin-top:10px;"><input id="cfgUrl" placeholder="Supabase 项目 URL（https://xxx.supabase.co）" value="${esc(SYNC_CFG.url)}"></div>
-  <div class="form"><input id="cfgKey" placeholder="Supabase anon key（公开密钥）" value="${esc(SYNC_CFG.key)}"></div>
-  <div class="form"><input id="cfgUid" placeholder="设备组 UID（同一 UID 的设备互通）" value="${esc(SYNC_CFG.uid)}"><button class="btn-main" data-a="saveCfg">保存配置</button></div>
+  <div class="form" style="margin-top:10px;"><input id="cfgUrl" class="cfg-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Supabase 项目 URL（https://xxx.supabase.co）" value="${esc(renderSync._url!==undefined?renderSync._url:SYNC_CFG.url)}"><button class="paste-btn" data-a="pasteUrl" title="粘贴">📋</button></div>
+  <div class="form"><input id="cfgKey" class="cfg-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Supabase anon key（公开密钥）" value="${esc(renderSync._key!==undefined?renderSync._key:SYNC_CFG.key)}"><button class="paste-btn" data-a="pasteKey" title="粘贴">📋</button></div>
+  <div class="form"><input id="cfgUid" class="cfg-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="设备组 UID（同一 UID 的设备互通）" value="${esc(renderSync._uid!==undefined?renderSync._uid:SYNC_CFG.uid)}"><button class="btn-main" data-a="saveCfg">保存配置</button></div>
+  <div class="form" style="gap:8px;">
+    <button class="btn-mini" data-a="fillDefault" style="flex:1;">⚡ 一键填入我的配置</button>
+    <button class="btn-mini" data-a="pasteFromClip" style="flex:1;">📋 从剪贴板粘贴</button>
+  </div>
   <div class="form">
     <button class="btn-main" data-a="pushNow" style="flex:1;">⬆️ 手动上传</button>
     <button class="btn-main" data-a="pullNow" style="flex:1;">⬇️ 手动下载</button>
@@ -1775,9 +1835,38 @@ function handleAction(btn){
       if(!confirm('确定删除这条话术？\n\n'+(ph.q||'')))break;
       DB.phrases.splice(i,1);save();render();toast('已删除');break;}
     case 'talk/delPh':DB.phrases.splice(i,1);save();render();break;
-    case 'sync/saveCfg':{SYNC_CFG={url:g('cfgUrl').value.trim(),key:g('cfgKey').value.trim(),uid:g('cfgUid').value.trim()||'yunqi'};localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));logSync('⚙️ 已保存同步配置');render();toast('配置已保存');break;}
+    case 'sync/saveCfg':{
+      const u=(document.getElementById('cfgUrl')||{}).value||renderSync._url||'';
+      const k=(document.getElementById('cfgKey')||{}).value||renderSync._key||'';
+      const i=(document.getElementById('cfgUid')||{}).value||renderSync._uid||'';
+      SYNC_CFG={url:u.trim(),key:k.trim().replace(/\s/g,''),uid:i.trim()||'yunqi'};
+      localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(SYNC_CFG));
+      renderSync._url=renderSync._key=renderSync._uid=undefined;
+      logSync('⚙️ 已保存同步配置'+(syncReady()?'':'（URL 或 Key 为空）'),syncReady()?'ok':'err');
+      render();toast(syncReady()?'配置已保存 ✅':'还差 URL 或 Key');
+      if(syncReady())pushCloud(true);
+      break;}
+    case 'sync/fillDefault':{
+      renderSync._url='https://qexlkpwhmqqxjbqvxovy.supabase.co';
+      renderSync._key='sb_publishable_4aYWG6_cbT3yYq38UvRLqw_tctJ59iM';
+      renderSync._uid='yunqi';render();toast('已填入，点「保存配置」');break;}
+    case 'sync/pasteFromClip':{
+      if(navigator.clipboard&&navigator.clipboard.readText){
+        navigator.clipboard.readText().then(t=>{
+          if(!t){toast('剪贴板是空的');return;}
+          // 自动识别：http 开头当 URL，其余当 key
+          if(/^https?:\/\//i.test(t.trim()))renderSync._url=t.trim();
+          else renderSync._key=t.trim().replace(/\s/g,'');
+          render();toast('已粘贴：'+(/^https?:/i.test(t)?'URL':'Key'));
+        }).catch(()=>toast('无权限读取剪贴板，请长按输入框手动粘贴'));
+      }else toast('此浏览器不支持自动读取，请长按输入框手动粘贴');
+      break;}
+    case 'sync/pasteUrl':{
+      fillCfgField('cfgUrl','_url');break;}
+    case 'sync/pasteKey':{
+      fillCfgField('cfgKey','_key');break;}
     case 'sync/pushNow':pushCloud();break;
-    case 'sync/pullNow':pullCloud();break;
+    case 'sync/pullNow':pullCloud(false,true);break;
     case 'sync/clearLog':SYNC_LOG=[];localStorage.setItem('yunqi_sync_log','[]');render();break;
     case 'gold/refreshGold':toast('正在获取实时行情…');fetchGold().then(ok=>{if(!ok)toast('获取失败，请检查网络');});break;
     case 'pod/shuffle':SHUFFLE.pod++;render();break;
@@ -1804,6 +1893,8 @@ document.addEventListener('click',e=>{
   if(pill){renderTalk._cat=pill.dataset.cat;render();}
 });
 document.addEventListener('input',e=>{
+  if(e.target.classList&&e.target.classList.contains('cfg-in')){
+    renderSync['_'+e.target.id.replace('cfg','').toLowerCase()]=e.target.value;return;}
   if(e.target.id==='finAmt'){renderFinance._amt=e.target.value;return;}
   if(e.target.id==='finNote'){renderFinance._note=e.target.value;return;}
   if(e.target.id==='finDate'){renderFinance._date=e.target.value;return;}
@@ -1849,7 +1940,7 @@ fetchGold();
 setInterval(()=>{if(navigator.onLine)fetchGold();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchGold();});
 
-/* v2：不使用 Service Worker，避免缓存旧版本 */
+/* v2：不注册 Service Worker，避免缓存焊死 */
 </script>
 </body>
 </html>

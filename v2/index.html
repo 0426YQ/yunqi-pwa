@@ -669,12 +669,12 @@ function goalList(){
   });
   // 5. 今日计划完成目标（优先用固定条数）
   const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
-  const slot=+DB.plans.slot||0;
+  const slot=(DB.plans.slot===0)?0:(+DB.plans.slot||6);
   const base=slot>0?slot:pl.length;
   out.push({
     icon:'📋',name:slot>0?`每日计划 ${slot} 条`:'今日计划全部完成',
     pct:base?Math.min(100,Math.round(pd/base*100)):0,
-    detail:base?`已完成 ${pd} / ${base} 条${slot>0&&pl.length<slot?` · 空缺 ${slot-pl.length} 条`:''}`:'今天还没有待办',
+    detail:base?`已完成 ${pd} / ${base} 条${slot>0&&pl.length<slot?` · 空缺 ${slot-pl.length} 条`:''}${slot>0&&pl.length>slot?` · 额外 ${pl.length-slot} 条`:''}`:'今天还没有待办',
     extra:base&&pd>=base?'🎉 今日计划全部完成啦':(base?`还差 ${base-pd} 条 🌸`:''),
   });
   return out;
@@ -685,7 +685,7 @@ function progressList(){
   const t=today();
   const arr=[];
   const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
-  const slot=+DB.plans.slot||0;const pbase=slot>0?slot:pl.length;
+  const slot=(DB.plans.slot===0)?0:(+DB.plans.slot||6);const pbase=slot>0?slot:pl.length;
   arr.push({icon:'📋',name:'每日计划',val:pbase?Math.min(100,Math.round(pd/pbase*100)):0,color:'#f06a8a',
     detail:pbase?`${pd}/${pbase} 条完成${slot>0?'（固定 '+slot+' 条）':''}`:'暂无待办'});
   const sp=(DB.sports[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
@@ -745,7 +745,7 @@ function renderHome(){
   <div class="quote"><div class="zh">🌸 ${q[0]}</div><div class="en">${q[1]}</div></div>
   <div class="card"><h2>🌸 今日概览</h2>
     <div class="stats">
-      ${statsCard('✅ 计划完成',done+'/'+((+DB.plans.slot||0)>0?DB.plans.slot:plans.length))}
+      ${statsCard('✅ 计划完成',done+'/'+(DB.plans.slot===0?plans.length:(+DB.plans.slot||6)))}
       ${statsCard('🏃 运动时长',sportMin,'分钟')}
       ${statsCard('💰 今日开支','¥'+fmtN(spend))}
       ${statsCard('📚 学习时长',studyMin,'分钟')}
@@ -814,48 +814,48 @@ function renderPlan(){
   const t=today();const list=DB.plans[t]||[];
   const done=list.filter(p=>p.done).length;
   const openIdx=(renderPlan._open||[]);
-  const slot=+DB.plans.slot||0;               // 每日固定条数
-  const fillMode=DB.plans.fill!==false;        // 是否自动补齐空位
+  const slot=(DB.plans.slot===0)?0:(+DB.plans.slot||6);   // 每日固定基础条数（默认 6）
+  // 固定条数 + 超额新增，全部按顺序展示
   const slots=slot>0?Array.from({length:Math.max(slot,list.length)},(_,i)=>list[i]):list;
+  const slotDone=list.slice(0,slot).filter(p=>p.done).length;   // 固定位完成数
+  const extraDone=slot>0?list.slice(slot).filter(p=>p.done).length:0;
   const hist=Object.keys(DB.plans).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
   const range=renderPlan._range||'7';
   const histList=(range==='all'?hist:hist.slice(0,parseInt(range)||7));
   return `${moduleHeader(MODULES[1])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
-    ${statsCard('今日完成',done)}
+    ${statsCard('今日完成',slot>0?slotDone+'/'+slot:done)}
     ${statsCard('未完成',list.length-done)}
     ${statsCard('累计记录',Object.values(DB.plans).reduce((a,b)=>a+(Array.isArray(b)?b.filter(x=>x&&!x.blank).length:0),0),'条')}
-    ${statsCard('完成率',(slot>0?done/slot:(list.length?done/list.length:0))?Math.round(done/(slot>0?slot:list.length)*100)+'%':'--')}
+    ${statsCard('完成率',slot>0?(slotDone/slot*100).toFixed(0)+'%':(list.length?Math.round(done/list.length*100)+'%':'--'))}
   </div></div>
   <div class="card"><h2>🎯 计划目标 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${slot>0?`每天固定 ${slot} 条`:'未设定固定条数'}</span></h2>
     <div class="goal-card"><div class="ring">
       <svg width="86" height="86" viewBox="0 0 86 86">
         <circle cx="43" cy="43" r="34" fill="none" stroke="#fce4ec" stroke-width="9"/>
         <circle cx="43" cy="43" r="34" fill="none" stroke="url(#plg1)" stroke-width="9" stroke-linecap="round"
-          stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34-(Math.min(100,slot>0?done/slot*100:(list.length?done/list.length*100:0))/100)*2*Math.PI*34}" transform="rotate(-90 43 43)"/>
+          stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34-(Math.min(100,slot>0?slotDone/slot*100:(list.length?done/list.length*100:0))/100)*2*Math.PI*34}" transform="rotate(-90 43 43)"/>
         <defs><linearGradient id="plg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f9b8c9"/><stop offset="100%" stop-color="#f06a8a"/></linearGradient></defs>
-        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#f06a8a">${slot>0?Math.min(100,Math.round(done/slot*100)):(list.length?Math.round(done/list.length*100):0)}%</text>
+        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#f06a8a">${slot>0?Math.min(100,Math.round(slotDone/slot*100)):(list.length?Math.round(done/list.length*100):0)}%</text>
       </svg>
       <div style="flex:1;">
         <div class="g-top">每日计划 ${slot>0?slot+' 条':'未设定'}</div>
-        <div class="g-sub">已完成 <b style="color:#f06a8a;">${done}</b> / ${slot>0?slot:list.length} 条${slot>0&&list.length>slot?`（超出 ${list.length-slot} 条）`:''}</div>
-        <div class="g-sub">${slot>0&&done>=slot?'🎉 今日固定计划全部完成，太棒了！':(slot>0?`还差 ${slot-done} 条就全部完成啦`:'设定固定条数后，每天自动生成对应数量的待办位')}</div>
+        <div class="g-sub">固定计划已完成 <b style="color:#f06a8a;">${slot>0?slotDone:done}</b> / ${slot>0?slot:list.length} 条${slot>0&&list.length>slot?`　·　额外新增 ${list.length-slot} 条（完成 ${extraDone}）`:''}</div>
+        <div class="g-sub">${slot>0&&slotDone>=slot?'🎉 今日固定计划全部完成，太棒了！':(slot>0?`还差 ${slot-slotDone} 条完成固定计划`:'设定固定条数后，每天自动生成对应数量的待办位')}</div>
         <div class="g-sub">累计 ${Object.values(DB.plans).reduce((a,b)=>a+(Array.isArray(b)?b.filter(x=>x&&!x.blank).length:0),0)} 条 · 历史 ${hist.length} 天</div>
       </div>
     </div></div>
-    <div class="form"><input id="plSlot" type="number" min="1" max="30" placeholder="每天固定条数，如 6" value="${slot||''}"><button class="btn-main" data-a="setPlanSlot">设固定条数</button></div>
-    <div class="form" style="align-items:center;gap:8px;">
-      <span class="seg" style="flex:0 0 auto;"><span class="seg-i ${fillMode?'on':''}" data-a="planFill" data-v="1">自动补齐空位</span><span class="seg-i ${!fillMode?'on':''}" data-a="planFill" data-v="0">只显示已填</span></span>
-      <span style="font-size:11px;color:#c9a6b1;flex:1;">${fillMode?'未填的空位会显示为「待填写」，点一下直接补上':'只显示你已录入的待办'}</span>
-    </div>
-    ${slot>0&&list.length>slot?`<div class="hint" style="color:#e87878;">⚠️ 今天已有 ${list.length} 条，超过固定 ${slot} 条。超出的不会被删，完成率按 ${slot} 条封顶计算。</div>`:''}
+    <div class="form"><input id="plSlot" type="number" min="0" max="30" placeholder="每天固定条数，如 6" value="${slot}"><button class="btn-main" data-a="setPlanSlot">设为固定 ${slot} 条</button></div>
+    <div class="hint">这是每天的<b>基础计划位</b>（当前 ${slot} 个）。空位会显示成虚线框，点一下就能补上内容；<b>超过 ${slot} 条也可以继续新增</b>，多出来的排在下面单独统计，不会被删掉。</div>
+    ${slot>0&&list.length>slot?`<div class="hint" style="color:#e87878;">今天已超出固定条数 ${list.length-slot} 条（共 ${list.length} 条），完成率按 ${slot} 条封顶算，超出部分单独统计。</div>`:''}
   </div>
-  <div class="card"><h2>📋 今日待办 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">点击展开详情</span></h2><div class="list">
+  <div class="card"><h2>📋 今日待办 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">点击展开详情</span></h2>
+  <div class="hint" style="margin-top:0;">${slot>0?`固定 ${slot} 条${list.length>slot?` + 额外 ${list.length-slot} 条`:''} · 共 ${Math.max(slot,list.length)} 个位置`:`共 ${list.length} 条`}</div><div class="list">
     ${slots.length?slots.map((p,i)=>{
       if(!p) return `<div class="row slot-empty" data-a="fillSlot" data-i="${i}">
         <span class="caret" style="opacity:.3;">▾</span>
         <div class="grow"><div class="t-main" style="color:#d3a8b5;font-weight:500;">＋ 待填写（第 ${i+1} 条）</div>
-        <div class="t-sub">点一下补上今天要做的事</div></div></div>`;
+        <div class="t-sub">基础计划位 · 点一下补上今天要做的事</div></div></div>`;
       const isOpen=openIdx.includes(i);
       return `<div class="row clickable ${p.done?'checked':''} ${isOpen?'open':''}" data-a="expand" data-i="${i}">
       <span class="caret">▾</span>
@@ -877,7 +877,7 @@ function renderPlan(){
         <button class="icon-btn del" data-a="del" data-i="${i}">✕</button>
       </div></div>`;}).join(''):'<div class="empty">今天还没有计划，添加一条吧 🌷</div>'}
   </div>
-  <div class="form"><input id="planIn" placeholder="要做的最重要的事…"><select id="planPri" style="flex:0 0 76px;"><option value="">普通</option><option value="1">⭐优先</option></select><button class="btn-main" data-a="add">添加</button></div>
+  <div class="form"><input id="planIn" placeholder="${slot>0&&list.length>=slot?'固定条数已满，仍可继续新增…':'要做的最重要的事…'}"><select id="planPri" style="flex:0 0 76px;"><option value="">普通</option><option value="1">⭐优先</option></select><button class="btn-main" data-a="add">${slot>0&&list.length>=slot?'＋ 额外新增':'添加'}</button></div>
   <div class="form"><input id="planNote" placeholder="备注（可选，记录细节）"></div></div>
   <div class="card"><h2>🗓️ 历史回看 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${hist.length} 天</span></h2>
   <div class="pill-row">${[['7','近7天'],['30','近30天'],['all','全部']].map(([v,n])=>`<div class="pill ${range===v?'active':''}" data-a="planRange" data-v="${v}">${n}</div>`).join('')}</div>

@@ -60,7 +60,8 @@ nav{
 }
 .nav-item:hover{background:#fdeef3;}
 .nav-item.active{background:linear-gradient(135deg,#f9b8c9,#f48fb1);box-shadow:var(--shadow);}
-.nav-logo{font-size:24px;margin-bottom:6px;}
+.nav-logo{font-size:24px;margin-bottom:6px;filter:drop-shadow(0 2px 4px rgba(240,106,138,.25));}
+.quote .lotus{font-size:13px;margin-right:2px;}
 main{flex:1;padding:14px 14px 40px;max-width:520px;margin:0 auto;width:100%;}
 /* ---------- 顶部 ---------- */
 header{text-align:center;padding:6px 0 4px;}
@@ -623,7 +624,7 @@ function goldToday(){
 let current='home';
 function renderNav(){
   const nav=document.getElementById('nav');
-  nav.innerHTML='<div class="nav-logo">🌸</div>'+MODULES.map(m=>
+  nav.innerHTML='<div class="nav-logo">🪷</div>'+MODULES.map(m=>
     `<div class="nav-item ${current===m.id?'active':''}" data-id="${m.id}" title="${m.name}">${m.icon}</div>`).join('');
   nav.querySelectorAll('.nav-item').forEach(el=>el.onclick=()=>{current=el.dataset.id;render();window.scrollTo(0,0);});
 }
@@ -695,7 +696,7 @@ function goalList(){
     icon:'📋',name:slot>0?`每日计划 ${slot} 条`:'今日计划全部完成',
     pct:base?Math.min(100,Math.round(pd/base*100)):0,
     detail:base?`已完成 ${pd} / ${base} 条${slot>0&&pl.length<slot?` · 空缺 ${slot-pl.length} 条`:''}${slot>0&&pl.length>slot?` · 额外 ${pl.length-slot} 条`:''}`:'今天还没有待办',
-    extra:base&&pd>=base?'🎉 今日计划全部完成啦':(base?`还差 ${base-pd} 条 🌸`:''),
+    extra:base&&pd>=base?'🎉 今日计划全部完成啦':(base?`还差 ${base-pd} 条 🪷`:''),
   });
   return out;
 }
@@ -762,8 +763,8 @@ function renderHome(){
     <div id="dateStr">${t} · 星期${'日一二三四五六'[new Date().getDay()]}</div>
     <button id="checkinBtn" class="${DB.checkin[t]?'done':''}">${DB.checkin[t]?'✓ 已打卡':'今日打卡'}</button>
   </header>
-  <div class="quote"><div class="zh">🌸 ${q[0]}</div><div class="en">${q[1]}</div></div>
-  <div class="card"><h2>🌸 今日概览</h2>
+  <div class="quote"><div class="zh"><span class="lotus">🪷</span> ${q[0]}</div><div class="en">${q[1]}</div></div>
+  <div class="card"><h2>🪷 今日概览</h2>
     <div class="stats">
       ${statsCard('✅ 计划完成',done+'/'+(DB.plans.slot===0?plans.length:(+DB.plans.slot||6)))}
       ${statsCard('🏃 运动时长',sportMin,'分钟')}
@@ -1103,7 +1104,7 @@ function renderPod(){
 }
 
 /* ---- 每日学习 ---- */
-const LEARN_STREAKS=['今天也是闪闪发光的一天呀 ✨','学到的都是自己的，了不起！🌸','坚持的每一天都在悄悄变强 💪','小小的积累，会变成大大的惊喜 🌷','为认真学习的你鼓掌 👏'];
+const LEARN_STREAKS=['今天也是闪闪发光的一天呀 ✨','学到的都是自己的，了不起！🪷','坚持的每一天都在悄悄变强 💪','小小的积累，会变成大大的惊喜 🌷','为认真学习的你鼓掌 👏'];
 const STUDY_CATS=['考公考编','英语','小说写作','历史','专业','其他'];
 function renderStudy(){
   const t=today();const list=DB.study[t]||[];
@@ -1445,7 +1446,7 @@ function renderTalk(){
         <button class="mini-btn" data-a="talkCopy" data-i="${gi}">📋 复制</button>
         <button class="mini-btn" data-a="talkEdit" data-i="${gi}">✏️ 改</button>
         <button class="mini-btn" data-a="talkDel" data-i="${gi}" style="color:#e87878;border-color:#f8d0d0;">✕ 删</button>
-      </div></div>`;}).join(''):'<div class="empty">没有匹配的话术，换个词试试 🌸</div>'}
+      </div></div>`;}).join(''):'<div class="empty">没有匹配的话术，换个词试试 🪷</div>'}
   </div>
   <div class="hint">共 ${list.length} 条匹配结果 · 数量不限，可自由增加与删减</div>
   </div>
@@ -1564,7 +1565,7 @@ function handleAction(btn){
     case 'plan/setPlanSlot':{
       const v=Math.max(0,Math.min(30,parseInt(g('plSlot').value)||0));
       DB.plans.slot=v;save();render();
-      toast(v>0?`已设置每天固定 ${v} 条 🌸`:'已取消固定条数');break;}
+      toast(v>0?`已设置每天固定 ${v} 条 🪷`:'已取消固定条数');break;}
     case 'plan/planFill':DB.plans.fill=btn.dataset.v==='1';save();render();break;
     case 'plan/fillSlot':{
       const v=prompt(`填写第 ${i+1} 条计划`);
@@ -1620,7 +1621,7 @@ function handleAction(btn){
       DB.study.weekGoal=v;save();render();toast('周目标已设定 🎯');break;}
     case 'study/del':DB.study[t].splice(i,1);save();render();break;
     case 'study/add':{const v=g('stTask').value.trim();const m=+g('stMin').value;if(!v||!m)return toast('填内容和时长哦');DB.study[t]=DB.study[t]||[];DB.study[t].push({cat:g('stCat').value,task:v,min:m});
-      DB.study.book=g('stCat').value;save();render();toast('学完啦，你真棒 🌸');break;}
+      DB.study.book=g('stCat').value;save();render();toast('学完啦，你真棒 🪷');break;}
     case 'earn/del':DB.money[t].splice(i,1);save();render();break;
     case 'earn/check':DB.money[t][i].got=DB.money[t][i].got||0;DB.money[t][i].done=!DB.money[t][i].done;save();render();toast('打卡成功 💪');break;
     case 'earn/add':{const app=g('emApp').value.trim();const got=+g('emGot').value||0;if(!app)return toast('填写软件名称哦');DB.money[t]=DB.money[t]||[];DB.money[t].push({app,got});save();render();break;}
@@ -1657,7 +1658,7 @@ function handleAction(btn){
       const catEl=g('phCat');const cat=catEl?catEl.value:(renderTalk._cat&&renderTalk._cat!=='全部'?renderTalk._cat:'职场');
       DB.phrases.unshift({cat,q,a:ans,mine:true,at:new Date().toLocaleDateString('zh-CN')});
       renderTalk._addQ='';renderTalk._addA='';
-      save();render();toast('已加入话术库 🌸');break;}
+      save();render();toast('已加入话术库 🪷');break;}
     case 'talk/talkShuffle':DB.talkBatch=(DB.talkBatch||0)+1;save();render();break;
     case 'talk/talkOnline':talkOnlineFetch();break;
     case 'talk/copyPh':copyText(btn.dataset.t||'', '话术已复制 📋');break;
@@ -1698,7 +1699,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='checkinBtn'){
     const t=today();
     if(DB.checkin[t]){delete DB.checkin[t];toast('已撤回今日打卡');}
-    else{DB.checkin[t]=true;toast('打卡成功，今天也超棒 🌸');}
+    else{DB.checkin[t]=true;toast('打卡成功，今天也超棒 🪷');}
     save();render();
   }
   const pill=e.target.closest('.pill');

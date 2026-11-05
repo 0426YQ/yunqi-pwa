@@ -609,6 +609,15 @@ function renderNav(){
 /* ================= 页面渲染 ================= */
 function statsCard(label,num,unit){return `<div class="stat"><div class="label">${label}</div><div class="num">${num}${unit?`<small> ${unit}</small>`:''}</div></div>`;}
 
+
+/* 本周（周一起）日期数组 */
+function getWeekDays(){
+  const now=new Date();const dow=(now.getDay()+6)%7;const mon=new Date(now);mon.setDate(now.getDate()-dow);
+  const arr=[];for(let k=0;k<7;k++){const d3=new Date(mon);d3.setDate(mon.getDate()+k);
+    arr.push(d3.getFullYear()+'-'+String(d3.getMonth()+1).padStart(2,'0')+'-'+String(d3.getDate()).padStart(2,'0'));}
+  return arr;
+}
+
 /* ---- 目标浏览：汇总各栏目的目标与进度 ---- */
 function goalList(){
   const t=today();
@@ -634,24 +643,27 @@ function goalList(){
     detail:emGoal>0?`累计到手 ¥${fmtN(emTotal)} / 日目标 ¥${fmtN(emGoal)}`:'还没有设定赚钱目标',
     extra:(DB.money[t]||[]).length?`今日已录 ${(DB.money[t]||[]).length} 个平台`:'今日还没录入',
   });
-  // 3. 学习目标（按累计时长折算 30 小时）
+  // 3. 学习目标（每日目标）
   let stTotal=0,stDays=0;Object.values(DB.study).forEach(l=>{if(Array.isArray(l))l.forEach(x=>stTotal+=+x.min||0);});
   Object.keys(DB.study).forEach(k=>{if((DB.study[k]||[]).length)stDays++;});
-  const stTarget=1800;
+  const stDaily=+DB.study.dayGoal||0;
+  const stToday=(DB.study[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
   out.push({
-    icon:'📚',name:'学习时长目标（30h）',
-    pct:Math.min(100,Math.round(stTotal/stTarget*100)),
-    detail:`累计 ${(stTotal/60).toFixed(1)} 小时 / 30 小时`,
-    extra:`已坚持 ${stDays} 天有学习记录`,
+    icon:'📚',name:'每日学习目标',
+    pct:stDaily>0?Math.min(100,Math.round(stToday/stDaily*100)):0,
+    detail:stDaily>0?`今日 ${stToday} 分钟 / 目标 ${stDaily} 分钟`:'还没有设定每日学习目标',
+    extra:`累计 ${(stTotal/60).toFixed(1)} 小时 · ${stDays} 天有记录${DB.study.weekGoal?' · 本周目标 '+DB.study.weekGoal+' 天':''}`,
   });
-  // 4. 运动目标（按累计 6000 分钟折算）
+  // 4. 运动目标（每日目标）
   let spTotal=0,spDays=0;Object.values(DB.sports).forEach(l=>{if(Array.isArray(l))l.forEach(x=>spTotal+=+x.min||0);});
   Object.keys(DB.sports).forEach(k=>{if((DB.sports[k]||[]).length)spDays++;});
+  const spDaily=+DB.sports.dayGoal||0;
+  const spToday=(DB.sports[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
   out.push({
-    icon:'🏃',name:'运动时长目标（100h）',
-    pct:Math.min(100,Math.round(spTotal/6000*100)),
-    detail:`累计 ${(spTotal/60).toFixed(1)} 小时 / 100 小时`,
-    extra:`运动 ${spDays} 天 · 平均每次 ${spDays?Math.round(spTotal/Math.max(1,Object.values(DB.sports).reduce((a,b)=>a+b.length,0))):0} 分钟`,
+    icon:'🏃',name:'每日运动目标',
+    pct:spDaily>0?Math.min(100,Math.round(spToday/spDaily*100)):0,
+    detail:spDaily>0?`今日 ${spToday} 分钟 / 目标 ${spDaily} 分钟`:'还没有设定每日运动目标',
+    extra:`累计 ${(spTotal/60).toFixed(1)} 小时 · ${spDays} 天有记录${DB.sports.weekGoal?' · 本周目标 '+DB.sports.weekGoal+' 天':''}`,
   });
   // 5. 今日计划完成目标（100% 完成）
   const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
@@ -672,11 +684,13 @@ function progressList(){
   arr.push({icon:'📋',name:'每日计划',val:pl.length?Math.round(pd/pl.length*100):0,color:'#f06a8a',
     detail:pl.length?`${pd}/${pl.length} 条完成`:'暂无待办'});
   const sp=(DB.sports[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
-  arr.push({icon:'🏃',name:'每日运动',val:Math.min(100,Math.round(sp/30*100)),color:'#7fbf9a',
-    detail:`${sp} 分钟 / 目标 30 分钟`});
+  const spG=+DB.sports.dayGoal||0;
+  arr.push({icon:'🏃',name:'每日运动',val:spG>0?Math.min(100,Math.round(sp/spG*100)):0,color:'#7fbf9a',
+    detail:spG>0?`${sp} 分钟 / 目标 ${spG} 分钟`:`${sp} 分钟 · 未设目标（去运动页设置）`});
   const st=(DB.study[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
-  arr.push({icon:'📚',name:'每日学习',val:Math.min(100,Math.round(st/60*100)),color:'#8fa9de',
-    detail:`${st} 分钟 / 目标 60 分钟`});
+  const stG=+DB.study.dayGoal||0;
+  arr.push({icon:'📚',name:'每日学习',val:stG>0?Math.min(100,Math.round(st/stG*100)):0,color:'#8fa9de',
+    detail:stG>0?`${st} 分钟 / 目标 ${stG} 分钟`:`${st} 分钟 · 未设目标（去学习页设置）`});
   const sv=(DB.save[t]||[]).reduce((a,b)=>a+(+b.amount||0),0);
   const svDayGoal=+DB.save.dayGoal||50;
   arr.push({icon:'🪙',name:'今日存钱',val:Math.min(100,Math.round(sv/svDayGoal*100)),color:'#f0b96a',
@@ -772,7 +786,8 @@ function renderHome(){
     <div class="go-links">
       <span class="chip" data-a="goModule" data-v="save">🪙 存钱目标</span>
       <span class="chip" data-a="goModule" data-v="earn">💸 赚钱目标</span>
-      <span class="chip" data-a="goModule" data-v="study">📚 学习记录</span>
+      <span class="chip" data-a="goModule" data-v="study">📚 学习目标</span>
+      <span class="chip" data-a="goModule" data-v="sport">🏃 运动目标</span>
       <span class="chip" data-a="goModule" data-v="plan">📋 计划进度</span>
     </div>`:`
     <div class="list">
@@ -847,14 +862,40 @@ function renderSport(){
   const t=today();const list=DB.sports[t]||[];
   const min=list.reduce((a,b)=>a+(+b.min||0),0), cal=list.reduce((a,b)=>a+(+b.cal||0),0);
   let tMin=0,tCal=0,days=0;const ds=Object.keys(DB.sports).sort();
-  ds.forEach(d=>{DB.sports[d].forEach(x=>{tMin+=+x.min||0;tCal+=+x.cal||0;});});
-  const d2=new Date();while(DB.sports[fmtD(d2)]){days++;d2.setDate(d2.getDate()-1);}
+  ds.forEach(d=>{const l=DB.sports[d];if(!Array.isArray(l))return;l.forEach(x=>{tMin+=+x.min||0;tCal+=+x.cal||0;});});
+  const d2=new Date();while(Array.isArray(DB.sports[fmtD(d2)])&&DB.sports[fmtD(d2)].length){days++;d2.setDate(d2.getDate()-1);}
   function fmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  const sDaily=+DB.sports.dayGoal||0;
+  const sCalGoal=+DB.sports.calGoal||0;
+  const sWeek=+DB.sports.weekGoal||0;
+  const sName='每日运动目标';
+  const wk=getWeekDays();
+  let weekDays=0;wk.forEach(dd=>{if((DB.sports[dd]||[]).length)weekDays++;});
   return `${moduleHeader(MODULES[2])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
     ${statsCard('今日总时长',min,'分钟')}${statsCard('今日消耗',cal,'千卡')}
     ${statsCard('累计时长',tMin,'分钟')}${statsCard('累计消耗',fmtN(tCal),'千卡')}
   </div><div style="text-align:center;"><span class="streak-badge">🔥 连续运动打卡 ${days} 天</span></div></div>
+  <div class="card"><h2>🎯 运动目标 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${sDaily>0?'已达成 '+Math.min(100,Math.round(min/sDaily*100))+'%':'未设定'}</span></h2>
+    <div class="goal-card"><div class="ring">
+      <svg width="86" height="86" viewBox="0 0 86 86">
+        <circle cx="43" cy="43" r="34" fill="none" stroke="#fce4ec" stroke-width="9"/>
+        <circle cx="43" cy="43" r="34" fill="none" stroke="url(#sg1)" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34-(Math.min(100,sDaily>0?min/sDaily*100:0)/100)*2*Math.PI*34}" transform="rotate(-90 43 43)"/>
+        <defs><linearGradient id="sg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ffd3a5"/><stop offset="100%" stop-color="#f06a8a"/></linearGradient></defs>
+        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#f06a8a">${sDaily>0?Math.min(100,Math.round(min/sDaily*100)):0}%</text>
+      </svg>
+      <div style="flex:1;">
+        <div class="g-top">${esc(sName)}</div>
+        <div class="g-sub">今日 ${min} 分钟 / 目标 ${sDaily||'--'} 分钟${sCalGoal>0?` · 消耗 ${cal}/${sCalGoal} 千卡`:''}</div>
+        <div class="g-sub">${sDaily>0?(min>=sDaily?'🎉 今日运动目标已完成，超棒！':`还差 <b style="color:#f06a8a;">${sDaily-min} 分钟</b> 就达标啦`):'设置每日目标，首页就能看到完成进度'}</div>
+        <div class="g-sub">累计 ${tMin} 分钟 · 连续 ${days} 天</div>
+      </div>
+    </div></div>
+    <div class="form"><input id="spDaily" type="number" placeholder="每日运动分钟目标" value="${sDaily||''}" style="flex:1 1 100px;"><input id="spCalGoal" type="number" placeholder="千卡目标(可选)" value="${sCalGoal||''}" style="flex:1 1 80px;"><button class="btn-main" data-a="setSpGoal">设目标</button></div>
+    <div class="form"><input id="spWeekGoal" type="number" placeholder="每周运动天数目标" value="${sWeek||''}"><button class="btn-main" data-a="setSpWeek" style="flex:0 0 110px;">设周目标</button></div>
+    ${sWeek>0?`<div class="t-sub" style="margin-top:6px;">本周已运动 <b style="color:#f06a8a;">${weekDays}</b> / ${sWeek} 天</div><div class="progress" style="height:7px;"><div style="width:${Math.min(100,Math.round(weekDays/sWeek*100))}%"></div></div>`:''}
+  </div>
   <div class="card"><h2>🏃 今日记录</h2><div class="list">
     ${list.length?list.map((s,i)=>`<div class="row"><div class="grow"><div class="t-main">${esc(s.name)}</div><div class="t-sub">${s.min} 分钟 · ${s.cal} 千卡</div></div>
       <div class="ops"><button class="icon-btn del" data-a="del" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">今天还没运动哦，动起来 🏃‍♀️</div>'}
@@ -900,15 +941,42 @@ function renderStudy(){
   const t=today();const list=DB.study[t]||[];
   const min=list.reduce((a,b)=>a+(+b.min||0),0);
   let tMin=0,days=0;
-  Object.values(DB.study).forEach(l=>l.forEach(x=>tMin+=+x.min||0));
+  Object.values(DB.study).forEach(l=>{if(Array.isArray(l))l.forEach(x=>tMin+=+x.min||0);});
   const d=new Date();const fmtD=d2=>d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
   while(DB.study[fmtD(d)]&&DB.study[fmtD(d)].length){days++;d.setDate(d.getDate()-1);}
-  const hist=Object.keys(DB.study).sort().reverse().slice(0,7);
+  const hist=Object.keys(DB.study).filter(k=>Array.isArray(DB.study[k])&&DB.study[k].length).sort().reverse().slice(0,7);
+  const stDaily=+DB.study.dayGoal||0;
+  const stWeek=+DB.study.weekGoal||0;
+  const stName=DB.study.goalName||'每日学习目标';
+  // 名称只存 DB.study.book 之外的独立 key，避免污染按日期索引
+  const stBook=DB.study.book||'';
+  const wk=getWeekDays();
+  let weekDays=0;wk.forEach(dd=>{if((DB.study[dd]||[]).length)weekDays++;});
   return `${moduleHeader(MODULES[5])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
     ${statsCard('今日总时长',min,'分钟')}${statsCard('今日任务数',list.length,'项')}
     ${statsCard('累计总时长',tMin,'分钟')}${statsCard('累计打卡',days,'天')}
   </div></div>
+  <div class="card"><h2>🎯 学习目标 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${stDaily>0?'已达成 '+Math.min(100,Math.round(min/stDaily*100))+'%':'未设定'}</span></h2>
+    <div class="goal-card"><div class="ring">
+      <svg width="86" height="86" viewBox="0 0 86 86">
+        <circle cx="43" cy="43" r="34" fill="none" stroke="#e8eefb" stroke-width="9"/>
+        <circle cx="43" cy="43" r="34" fill="none" stroke="url(#stg1)" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34-(Math.min(100,stDaily>0?min/stDaily*100:0)/100)*2*Math.PI*34}" transform="rotate(-90 43 43)"/>
+        <defs><linearGradient id="stg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a9c6f0"/><stop offset="100%" stop-color="#6f8fd6"/></linearGradient></defs>
+        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#6f8fd6">${stDaily>0?Math.min(100,Math.round(min/stDaily*100)):0}%</text>
+      </svg>
+      <div style="flex:1;">
+        <div class="g-top">${esc(stName)}</div>
+        <div class="g-sub">今日 ${min} 分钟 / 目标 ${stDaily||'--'} 分钟</div>
+        <div class="g-sub">${stDaily>0?(min>=stDaily?'🎉 今日学习目标已完成，好棒！':`还差 <b style="color:#6f8fd6;">${stDaily-min} 分钟</b> 就达标啦`):'设置每日目标，首页就能看到完成进度'}</div>
+        <div class="g-sub">累计 ${(tMin/60).toFixed(1)} 小时 · 连续 ${days} 天${stBook?' · 当前：'+esc(stBook):''}</div>
+      </div>
+    </div></div>
+    <div class="form"><input id="stDaily" type="number" placeholder="每日学习分钟目标" value="${stDaily||''}" style="flex:0 0 110px;"><input id="stName" placeholder="目标名称，如：考公考编" value="${esc(stName==='每日学习目标'?'':stName)}"><button class="btn-main" data-a="setStGoal">设目标</button></div>
+    <div class="form"><input id="stWeekGoal" type="number" placeholder="每周学习天数目标" value="${stWeek||''}"><button class="btn-main" data-a="setStWeek" style="flex:0 0 110px;">设周目标</button></div>
+    ${stWeek>0?`<div class="t-sub" style="margin-top:6px;">本周已学习 <b style="color:#6f8fd6;">${weekDays}</b> / ${stWeek} 天</div><div class="progress" style="height:7px;"><div style="width:${Math.min(100,Math.round(weekDays/stWeek*100))}%;background:linear-gradient(90deg,#a9c6f0,#6f8fd6);"></div></div>`:''}
+  </div>
   <div class="card"><h2>📚 今日学习任务</h2><div class="list">
     ${list.length?list.map((s,i)=>`<div class="row"><span class="tag">${esc(s.cat)}</span><div class="grow"><div class="t-main">${esc(s.task)}</div><div class="t-sub">${s.min} 分钟</div></div>
     <div class="ops"><button class="icon-btn del" data-a="del" data-i="${i}">✕</button></div></div>`).join(''):'<div class="empty">添加今天的第一个学习任务吧 📖</div>'}
@@ -916,7 +984,7 @@ function renderStudy(){
   <div class="form"><input id="stTask" placeholder="学习内容"><select id="stCat" style="flex:0 0 96px;">${STUDY_CATS.map(c=>`<option>${c}</option>`).join('')}</select><input id="stMin" type="number" placeholder="分钟" style="flex:0 0 70px;"><button class="btn-main" data-a="add">录入</button></div></div>
   ${list.length?`<div class="card"><h2>🌷 今日鼓励</h2><div style="text-align:center;font-size:14px;color:var(--text-dark);padding:6px 0;">${LEARN_STREAKS[daySeed()%LEARN_STREAKS.length]}</div></div>`:''}
   <div class="card"><h2>🗓️ 历史复盘</h2><div class="list">
-    ${hist.length?hist.map(d2=>{const l=DB.study[d2]||[];const m=l.reduce((a,b)=>a+(+b.min||0),0);
+    ${hist.length?hist.map(d2=>{const l=Array.isArray(DB.study[d2])?DB.study[d2]:[];const m=l.reduce((a,b)=>a+(+b.min||0),0);
       return `<div class="row"><div class="grow"><div class="t-main">${d2}</div><div class="t-sub">${l.length} 项 · 共 ${m} 分钟${l[0]?' · '+esc(l[0].task)+(l.length>1?' 等':''):''}</div></div></div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
   </div></div>`;
 }
@@ -1137,13 +1205,29 @@ function handleAction(btn){
       DB.plans[t]=DB.plans[t]||[];
       DB.plans[t].push({t:v,done:false,pri:g('planPri').value==='1',note,at:new Date().toLocaleString('zh-CN',{hour12:false})});
       save();render();break;}
+    case 'sport/setSpGoal':{
+      const d1=+g('spDaily').value,cg=+g('spCalGoal').value;
+      if(!d1)return toast('填一下每日运动分钟目标');
+      DB.sports.dayGoal=d1;DB.sports.calGoal=cg||0;
+      save();render();toast('运动目标已设定 🎯');break;}
+    case 'sport/setSpWeek':{const v=+g('spWeekGoal').value;if(!v)return toast('填一下每周天数目标');
+      DB.sports.weekGoal=v;save();render();toast('周目标已设定 🎯');break;}
     case 'sport/del':DB.sports[t].splice(i,1);save();render();break;
     case 'sport/add':{const n=g('spName').value.trim();const m=+g('spMin').value,c=+g('spCal').value;if(!n||!m)return toast('填写项目和时长哦');DB.sports[t]=DB.sports[t]||[];DB.sports[t].push({name:n,min:m,cal:c||0});save();render();break;}
     case 'money/addSpend':{const amt=+g('finAmt').value;if(!amt)return toast('填一下金额呀');DB.finance[t]=DB.finance[t]||{list:[],save:0};DB.finance[t].list=DB.finance[t].list||[];DB.finance[t].list.push({amount:amt,type:g('finCat').value,note:g('finNote').value.trim()});save();render();break;}
     case 'money/addSave':{const amt=+g('finSave').value;if(!amt)return toast('填一下金额呀');DB.finance[t]=DB.finance[t]||{list:[],save:0};DB.finance[t].save=(+DB.finance[t].save||0)+amt;save();render();break;}
     case 'money/delSpend':{DB.finance[t].list.splice(i,1);save();render();break;}
+    case 'study/setStGoal':{
+      const d1=+g('stDaily').value;
+      if(!d1)return toast('填一下每日学习分钟目标');
+      DB.study.dayGoal=d1;
+      const nm=g('stName');if(nm&&nm.value.trim())DB.study.goalName=nm.value.trim();
+      save();render();toast('学习目标已设定 🎯');break;}
+    case 'study/setStWeek':{const v=+g('stWeekGoal').value;if(!v)return toast('填一下每周天数目标');
+      DB.study.weekGoal=v;save();render();toast('周目标已设定 🎯');break;}
     case 'study/del':DB.study[t].splice(i,1);save();render();break;
-    case 'study/add':{const v=g('stTask').value.trim();const m=+g('stMin').value;if(!v||!m)return toast('填内容和时长哦');DB.study[t]=DB.study[t]||[];DB.study[t].push({cat:g('stCat').value,task:v,min:m});save();render();toast('学完啦，你真棒 🌸');break;}
+    case 'study/add':{const v=g('stTask').value.trim();const m=+g('stMin').value;if(!v||!m)return toast('填内容和时长哦');DB.study[t]=DB.study[t]||[];DB.study[t].push({cat:g('stCat').value,task:v,min:m});
+      DB.study.book=g('stCat').value;save();render();toast('学完啦，你真棒 🌸');break;}
     case 'earn/del':DB.money[t].splice(i,1);save();render();break;
     case 'earn/check':DB.money[t][i].got=DB.money[t][i].got||0;DB.money[t][i].done=!DB.money[t][i].done;save();render();toast('打卡成功 💪');break;
     case 'earn/add':{const app=g('emApp').value.trim();const got=+g('emGot').value||0;if(!app)return toast('填写软件名称哦');DB.money[t]=DB.money[t]||[];DB.money[t].push({app,got});save();render();break;}

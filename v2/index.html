@@ -210,6 +210,8 @@ header{text-align:center;padding:6px 0 4px;}
   border-radius:13px;padding:8px 4px;text-align:center;}
 .goal-sum .gs b{display:block;font-size:17px;color:var(--pink-rose);font-weight:800;}
 .goal-sum .gs span{font-size:10px;color:#c2899a;}
+.row.slot-empty{background:#fffcfd;border:1.5px dashed rgba(248,200,212,.9);cursor:pointer;}
+.row.slot-empty:active{background:#fdeef3;}
 .go-row,.pg-row{background:#fffafc;border:1px solid rgba(248,200,212,.5);border-radius:14px;padding:9px 11px;margin-bottom:8px;}
 .go-row.ok{background:linear-gradient(150deg,#f4fbf7,#eaf7ef);border-color:rgba(127,191,154,.5);}
 .go-head,.pg-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text-dark);}
@@ -665,13 +667,15 @@ function goalList(){
     detail:spDaily>0?`今日 ${spToday} 分钟 / 目标 ${spDaily} 分钟`:'还没有设定每日运动目标',
     extra:`累计 ${(spTotal/60).toFixed(1)} 小时 · ${spDays} 天有记录${DB.sports.weekGoal?' · 本周目标 '+DB.sports.weekGoal+' 天':''}`,
   });
-  // 5. 今日计划完成目标（100% 完成）
+  // 5. 今日计划完成目标（优先用固定条数）
   const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
+  const slot=+DB.plans.slot||0;
+  const base=slot>0?slot:pl.length;
   out.push({
-    icon:'📋',name:'今日计划全部完成',
-    pct:pl.length?Math.round(pd/pl.length*100):0,
-    detail:pl.length?`已完成 ${pd} / ${pl.length} 条`:'今天还没有待办',
-    extra:pl.length&&pd===pl.length?'🎉 今日计划全部完成啦':'加油，一条一条来 🌸',
+    icon:'📋',name:slot>0?`每日计划 ${slot} 条`:'今日计划全部完成',
+    pct:base?Math.min(100,Math.round(pd/base*100)):0,
+    detail:base?`已完成 ${pd} / ${base} 条${slot>0&&pl.length<slot?` · 空缺 ${slot-pl.length} 条`:''}`:'今天还没有待办',
+    extra:base&&pd>=base?'🎉 今日计划全部完成啦':(base?`还差 ${base-pd} 条 🌸`:''),
   });
   return out;
 }
@@ -681,8 +685,9 @@ function progressList(){
   const t=today();
   const arr=[];
   const pl=DB.plans[t]||[];const pd=pl.filter(p=>p.done).length;
-  arr.push({icon:'📋',name:'每日计划',val:pl.length?Math.round(pd/pl.length*100):0,color:'#f06a8a',
-    detail:pl.length?`${pd}/${pl.length} 条完成`:'暂无待办'});
+  const slot=+DB.plans.slot||0;const pbase=slot>0?slot:pl.length;
+  arr.push({icon:'📋',name:'每日计划',val:pbase?Math.min(100,Math.round(pd/pbase*100)):0,color:'#f06a8a',
+    detail:pbase?`${pd}/${pbase} 条完成${slot>0?'（固定 '+slot+' 条）':''}`:'暂无待办'});
   const sp=(DB.sports[t]||[]).reduce((a,b)=>a+(+b.min||0),0);
   const spG=+DB.sports.dayGoal||0;
   arr.push({icon:'🏃',name:'每日运动',val:spG>0?Math.min(100,Math.round(sp/spG*100)):0,color:'#7fbf9a',
@@ -740,7 +745,7 @@ function renderHome(){
   <div class="quote"><div class="zh">🌸 ${q[0]}</div><div class="en">${q[1]}</div></div>
   <div class="card"><h2>🌸 今日概览</h2>
     <div class="stats">
-      ${statsCard('✅ 计划完成',done+'/'+plans.length)}
+      ${statsCard('✅ 计划完成',done+'/'+((+DB.plans.slot||0)>0?DB.plans.slot:plans.length))}
       ${statsCard('🏃 运动时长',sportMin,'分钟')}
       ${statsCard('💰 今日开支','¥'+fmtN(spend))}
       ${statsCard('📚 学习时长',studyMin,'分钟')}
@@ -809,18 +814,48 @@ function renderPlan(){
   const t=today();const list=DB.plans[t]||[];
   const done=list.filter(p=>p.done).length;
   const openIdx=(renderPlan._open||[]);
-  const hist=Object.keys(DB.plans).sort().reverse();
+  const slot=+DB.plans.slot||0;               // 每日固定条数
+  const fillMode=DB.plans.fill!==false;        // 是否自动补齐空位
+  const slots=slot>0?Array.from({length:Math.max(slot,list.length)},(_,i)=>list[i]):list;
+  const hist=Object.keys(DB.plans).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
   const range=renderPlan._range||'7';
   const histList=(range==='all'?hist:hist.slice(0,parseInt(range)||7));
   return `${moduleHeader(MODULES[1])}
   <div class="card"><h2>📊 数据</h2><div class="stats">
     ${statsCard('今日完成',done)}
     ${statsCard('未完成',list.length-done)}
-    ${statsCard('累计记录',Object.values(DB.plans).reduce((a,b)=>a+b.length,0),'条')}
-    ${statsCard('完成率',list.length?Math.round(done/list.length*100)+'%':'--')}
+    ${statsCard('累计记录',Object.values(DB.plans).reduce((a,b)=>a+(Array.isArray(b)?b.filter(x=>x&&!x.blank).length:0),0),'条')}
+    ${statsCard('完成率',(slot>0?done/slot:(list.length?done/list.length:0))?Math.round(done/(slot>0?slot:list.length)*100)+'%':'--')}
   </div></div>
+  <div class="card"><h2>🎯 计划目标 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${slot>0?`每天固定 ${slot} 条`:'未设定固定条数'}</span></h2>
+    <div class="goal-card"><div class="ring">
+      <svg width="86" height="86" viewBox="0 0 86 86">
+        <circle cx="43" cy="43" r="34" fill="none" stroke="#fce4ec" stroke-width="9"/>
+        <circle cx="43" cy="43" r="34" fill="none" stroke="url(#plg1)" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34-(Math.min(100,slot>0?done/slot*100:(list.length?done/list.length*100:0))/100)*2*Math.PI*34}" transform="rotate(-90 43 43)"/>
+        <defs><linearGradient id="plg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f9b8c9"/><stop offset="100%" stop-color="#f06a8a"/></linearGradient></defs>
+        <text x="43" y="48" text-anchor="middle" font-size="17" font-weight="800" fill="#f06a8a">${slot>0?Math.min(100,Math.round(done/slot*100)):(list.length?Math.round(done/list.length*100):0)}%</text>
+      </svg>
+      <div style="flex:1;">
+        <div class="g-top">每日计划 ${slot>0?slot+' 条':'未设定'}</div>
+        <div class="g-sub">已完成 <b style="color:#f06a8a;">${done}</b> / ${slot>0?slot:list.length} 条${slot>0&&list.length>slot?`（超出 ${list.length-slot} 条）`:''}</div>
+        <div class="g-sub">${slot>0&&done>=slot?'🎉 今日固定计划全部完成，太棒了！':(slot>0?`还差 ${slot-done} 条就全部完成啦`:'设定固定条数后，每天自动生成对应数量的待办位')}</div>
+        <div class="g-sub">累计 ${Object.values(DB.plans).reduce((a,b)=>a+(Array.isArray(b)?b.filter(x=>x&&!x.blank).length:0),0)} 条 · 历史 ${hist.length} 天</div>
+      </div>
+    </div></div>
+    <div class="form"><input id="plSlot" type="number" min="1" max="30" placeholder="每天固定条数，如 6" value="${slot||''}"><button class="btn-main" data-a="setPlanSlot">设固定条数</button></div>
+    <div class="form" style="align-items:center;gap:8px;">
+      <span class="seg" style="flex:0 0 auto;"><span class="seg-i ${fillMode?'on':''}" data-a="planFill" data-v="1">自动补齐空位</span><span class="seg-i ${!fillMode?'on':''}" data-a="planFill" data-v="0">只显示已填</span></span>
+      <span style="font-size:11px;color:#c9a6b1;flex:1;">${fillMode?'未填的空位会显示为「待填写」，点一下直接补上':'只显示你已录入的待办'}</span>
+    </div>
+    ${slot>0&&list.length>slot?`<div class="hint" style="color:#e87878;">⚠️ 今天已有 ${list.length} 条，超过固定 ${slot} 条。超出的不会被删，完成率按 ${slot} 条封顶计算。</div>`:''}
+  </div>
   <div class="card"><h2>📋 今日待办 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">点击展开详情</span></h2><div class="list">
-    ${list.length?list.map((p,i)=>{
+    ${slots.length?slots.map((p,i)=>{
+      if(!p) return `<div class="row slot-empty" data-a="fillSlot" data-i="${i}">
+        <span class="caret" style="opacity:.3;">▾</span>
+        <div class="grow"><div class="t-main" style="color:#d3a8b5;font-weight:500;">＋ 待填写（第 ${i+1} 条）</div>
+        <div class="t-sub">点一下补上今天要做的事</div></div></div>`;
       const isOpen=openIdx.includes(i);
       return `<div class="row clickable ${p.done?'checked':''} ${isOpen?'open':''}" data-a="expand" data-i="${i}">
       <span class="caret">▾</span>
@@ -847,10 +882,10 @@ function renderPlan(){
   <div class="card"><h2>🗓️ 历史回看 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">共 ${hist.length} 天</span></h2>
   <div class="pill-row">${[['7','近7天'],['30','近30天'],['all','全部']].map(([v,n])=>`<div class="pill ${range===v?'active':''}" data-a="planRange" data-v="${v}">${n}</div>`).join('')}</div>
   ${histList.length?histList.map(d=>{
-    const l=DB.plans[d]||[];const dn=l.filter(p=>p.done).length;
+    const l=Array.isArray(DB.plans[d])?DB.plans[d]:[];const dn=l.filter(p=>p.done).length;
     const isH=renderPlan._hd===d;
     return `<div class="hist-item"><div class="h-head" data-a="planHist" data-d="${d}" style="cursor:pointer;">
-      <span>${d} <span style="font-size:11px;color:#c2899a;font-weight:400;">完成 ${dn}/${l.length}</span></span>
+      <span>${d} <span style="font-size:11px;color:#c2899a;font-weight:400;">完成 ${dn}/${slot>0?Math.max(slot,l.length):l.length}${slot>0&&l.length<slot?` · 空缺 ${slot-l.length}`:''}</span></span>
       <span class="caret" style="transform:rotate(${isH?180:0}deg);">▾</span></div>
       ${isH?`<div class="h-body">${l.map(p=>`<div class="${p.done?'done':'undone'}">${p.done?'✅':'⭕'} ${esc(p.t)}${p.pri?' ⭐':''}${p.note?' <span style="color:#c9a6b1;">('+esc(p.note)+')</span>':''}</div>`).join('')||'<div style="color:#d3a8b5;">当天无记录</div>'}</div>`:''}
     </div>`;}).join(''):'<div class="empty">暂无历史记录</div>'}
@@ -1195,6 +1230,21 @@ function handleAction(btn){
     case 'home/homeTab':renderHome._tab=btn.dataset.v;render();break;
     case 'home/goModule':current=btn.dataset.v;render();break;
     case 'plan/toggle':{const it=DB.plans[t][i];it.done=!it.done;it.doneAt=it.done?new Date().toLocaleString('zh-CN',{hour12:false}):'';save();render();break;}
+    case 'plan/setPlanSlot':{
+      const v=Math.max(0,Math.min(30,parseInt(g('plSlot').value)||0));
+      DB.plans.slot=v;save();render();
+      toast(v>0?`已设置每天固定 ${v} 条 🌸`:'已取消固定条数');break;}
+    case 'plan/planFill':DB.plans.fill=btn.dataset.v==='1';save();render();break;
+    case 'plan/fillSlot':{
+      const v=prompt(`填写第 ${i+1} 条计划`);
+      if(v===null)return;
+      const vv=(v||'').trim();if(!vv)return toast('还没写内容哦');
+      DB.plans[t]=DB.plans[t]||[];
+      // 补到 i 位置（中间若有空缺用占位）
+      while(DB.plans[t].length<i)DB.plans[t].push({t:'（未填写）',done:false,blank:true,at:new Date().toLocaleString('zh-CN',{hour12:false})});
+      if(DB.plans[t][i]&&DB.plans[t][i].blank){DB.plans[t][i]={t:vv,done:false,pri:false,at:new Date().toLocaleString('zh-CN',{hour12:false})};}
+      else DB.plans[t].push({t:vv,done:false,pri:false,at:new Date().toLocaleString('zh-CN',{hour12:false})});
+      save();render();toast('已补上 🌷');break;}
     case 'plan/expand':{const arr=renderPlan._open||[];const k=arr.indexOf(i);if(k>=0)arr.splice(k,1);else arr.push(i);renderPlan._open=arr;render();break;}
     case 'plan/planRange':renderPlan._range=btn.dataset.v;renderPlan._hd=null;render();break;
     case 'plan/planHist':renderPlan._hd=renderPlan._hd===btn.dataset.d?null:btn.dataset.d;render();break;

@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#fde3ec">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -238,6 +241,12 @@ header{text-align:center;padding:6px 0 4px;}
   font-size:12px;font-weight:600;padding:9px 10px;cursor:pointer;font-family:inherit;
 }
 .btn-mini:active{transform:scale(.97);}
+.cfg-status{
+  margin-top:9px;padding:9px 12px;border-radius:12px;
+  background:linear-gradient(135deg,#fff8ea,#fff2f6);
+  border:1px dashed rgba(255,188,132,.85);
+  font-size:11.5px;color:#b07a8c;line-height:1.5;word-break:break-all;
+}
 .form .btn-main,.btn-main{
   background:linear-gradient(135deg,#ee6f96 0%,#f4846f 52%,#ffb037 100%);
   color:#fff;border:none;border-radius:13px;padding:9px 16px;
@@ -525,6 +534,9 @@ function renderSync(){
     <button class="btn-mini" data-a="fillDefault" style="flex:1;">⚡ 一键填入我的配置</button>
     <button class="btn-mini" data-a="pasteFromClip" style="flex:1;">📋 从剪贴板粘贴</button>
   </div>
+  <div class="cfg-status">${syncReady()
+    ? `✅ 已配置 · ${esc((SYNC_CFG.url||'').replace(/^https?:\/\//,'').split('.')[0])} · Key 结尾 ${esc((SYNC_CFG.key||'').slice(-8))}`
+    : `⚠️ 还没配置：点上面「⚡ 一键填入我的配置」即可`}</div>
   <div class="form">
     <button class="btn-main" data-a="pushNow" style="flex:1;">⬆️ 手动上传</button>
     <button class="btn-main" data-a="pullNow" style="flex:1;">⬇️ 手动下载</button>

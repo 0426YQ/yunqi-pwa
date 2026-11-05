@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#fbdaE7">
+<meta name="theme-color" content="#fbc7da">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -34,7 +34,7 @@
   --g-butter:linear-gradient(135deg,#ffd66b 0%,#ffe9a8 100%);
   --g-pink-butter:linear-gradient(135deg,#ffb3c9 0%,#ffd9b0 55%,#ffeda8 100%);
   --g-card:linear-gradient(150deg,#fffaf6 0%,#fff3f7 55%,#fffaea 100%);
-  --g-page:linear-gradient(160deg,#fbdaE7 0%,#fde8f0 26%,#fff1dc 62%,#fff6cf 100%);
+  --g-page:linear-gradient(170deg,#fbc7da 0%,#fdd2e2 26%,#fddde8 58%,#fdeaf1 100%);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{
@@ -50,10 +50,10 @@ body{
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(circle at 6% 2%,rgba(255,199,80,.40) 0%,transparent 46%),
-    radial-gradient(circle at 94% 10%,rgba(247,140,175,.36) 0%,transparent 48%),
-    radial-gradient(circle at 80% 92%,rgba(255,214,110,.34) 0%,transparent 50%),
-    radial-gradient(circle at 8% 82%,rgba(250,158,190,.30) 0%,transparent 48%);
+    radial-gradient(circle at 92% 6%,rgba(255,158,190,.42) 0%,transparent 46%),
+    radial-gradient(circle at 68% 88%,rgba(247,132,168,.38) 0%,transparent 50%),
+    radial-gradient(circle at 12% 96%,rgba(255,214,120,.26) 0%,transparent 42%),
+    radial-gradient(circle at 4% 30%,rgba(255,246,205,.20) 0%,transparent 38%);
 }
 #app{position:relative;z-index:1;}
 /* ---------- 布局 ---------- */
@@ -61,9 +61,10 @@ body::before{
 /* 侧边竖向导航 */
 nav{
   width:56px;
-  background:linear-gradient(180deg,rgba(255,247,235,.92) 0%,rgba(255,238,246,.90) 55%,rgba(255,247,222,.92) 100%);
+  background:linear-gradient(178deg,#fff7d6 0%,#fff0cc 20%,#ffe8d8 46%,#ffdee8 72%,#ffd7e4 100%);
   backdrop-filter:blur(12px);
-  border-right:1px solid rgba(255,206,80,.5);
+  border-right:1px solid rgba(255,206,120,.55);
+  box-shadow:3px 0 14px rgba(246,140,175,.12);
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -84,9 +85,15 @@ nav{
   cursor:pointer;transition:.2s;
   position:relative;
 }
-.nav-item:hover{background:rgba(255,227,236,.75);}
-.nav-item.active{background:var(--g-pink-butter);box-shadow:0 4px 14px rgba(238,111,146,.28);}
-.nav-logo{font-size:24px;margin-bottom:6px;filter:drop-shadow(0 2px 5px rgba(255,196,120,.4));}
+.nav-item{color:#b87b4a;}
+.nav-item:hover{background:linear-gradient(135deg,rgba(255,240,190,.9),rgba(255,214,226,.85));}
+.nav-item.active{
+  background:linear-gradient(135deg,#ffcf3d 0%,#ffab6b 46%,#f2769f 100%);
+  box-shadow:0 5px 16px rgba(235,100,140,.45),inset 0 1px 0 rgba(255,255,255,.65);
+  transform:scale(1.06);
+  border:1.5px solid rgba(255,255,255,.75);
+}
+.nav-logo{font-size:24px;margin-bottom:8px;filter:drop-shadow(0 2px 6px rgba(255,190,90,.5));}
 .quote .lotus{font-size:13px;margin-right:2px;}
 main{flex:1;min-width:0;padding:14px 14px 40px;max-width:520px;margin:0 auto;width:100%;}
 /* ---------- 顶部 ---------- */

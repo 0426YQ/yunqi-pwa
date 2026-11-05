@@ -465,41 +465,46 @@ try{const c=JSON.parse(localStorage.getItem(GOLD_CACHE_KEY)||'null');if(c)GOLD={
 function saveGoldCache(){localStorage.setItem(GOLD_CACHE_KEY,JSON.stringify(GOLD));}
 
 async function fetchGold(){
-  if(GOLD.updating)return;
+  if(GOLD.updating)return false;
   GOLD.updating=true;
   try{
-    const r=await fetch('https://hq.sinajs.cn/list=hf_XAU,hf_XAG,gds_AU9999',
-      {headers:{'Referer':'https://finance.sina.com.cn'},cache:'no-store'});
-    const buf=await r.arrayBuffer();
-    const txt=new TextDecoder('gbk').decode(buf);
-    const grab=code=>{const m=txt.match(new RegExp('hq_str_'+code+'="([^"]*)"'));return m?m[1].split(','):null;};
-    const xau=grab('hf_XAU'), xag=grab('hf_XAG'), au=grab('gds_AU9999');
-    // 伦敦金：0当前价 1买价 2卖价 ... 6时间 7昨收
-    if(xau&&xau[0]){
-      GOLD.usd=(+xau[0]).toFixed(2);
-      const prev=+xau[7]||+xau[0];
-      GOLD.usdChg=(((xau[0]-prev)/prev)*100).toFixed(2);
-      GOLD.time=xau[6]||'';
+    /* gold-api.com：支持 CORS，可浏览器直连；er-api：美元人民币汇率 */
+    const [xauR,xagR,fxR]=await Promise.all([
+      fetch('https://api.gold-api.com/price/XAU',{cache:'no-store'}),
+      fetch('https://api.gold-api.com/price/XAG',{cache:'no-store'}),
+      fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'}),
+    ]);
+    if(!xauR.ok)throw new Error('金价接口异常');
+    const xau=await xauR.json();
+    const xag=xagR.ok?await xagR.json():null;
+    let fx=7.1;
+    if(fxR.ok){
+      const fxJson=await fxR.json();
+      if(fxJson&&fxJson.rates&&fxJson.rates.CNY)fx=+fxJson.rates.CNY;
     }
-    // 伦敦银：由沪金与伦敦金反推汇率，折算成 元/克
-    if(xag&&xag[0])GOLD.silver=(+xag[0]).toFixed(2);
-    if(au&&au[0]){
-      GOLD.cny=(+au[0]).toFixed(2);
-      const prev=+au[2]||+au[0];
-      GOLD.cnyChg=(((au[0]-prev)/prev)*100).toFixed(2);
-      if(au[6])GOLD.time=au[6];
+    const usdPerOz=+xau.price;              // 美元/盎司
+    if(!usdPerOz||isNaN(usdPerOz))throw new Error('金价空值');
+    GOLD.usd=usdPerOz.toFixed(2);
+    // 折算人民币/克（1 金衡盎司 = 31.1035 克），国内现货较国际有溢价，加约 0.6%
+    GOLD.cny=(usdPerOz/31.1035*fx*1.006).toFixed(2);
+    GOLD.cnyChg=(GOLD._lastCny&&+GOLD._lastCny>0
+      ?(((usdPerOz/31.1035*fx)-(+GOLD._lastCny))/(+GOLD._lastCny)*100).toFixed(2)
+      :'0.00');
+    if(xag&&+xag.price>0){
+      GOLD.silver=(+xag.price).toFixed(2);
+      GOLD.silverCny=((+xag.price)/31.1035*fx).toFixed(2);
     }
-    if(GOLD.silver&&GOLD.usd&&GOLD.cny&&+GOLD.usd>0){
-      const usdCny=(+GOLD.cny)*31.1035/(+GOLD.usd);
-      GOLD.silverCny=((+GOLD.silver)/31.1035*usdCny).toFixed(2);
-    }
-    GOLD.ok=true;GOLD.date=new Date().toLocaleString('zh-CN',{hour12:false});
+    GOLD.fx=fx.toFixed(3);
+    GOLD.time=new Date().toTimeString().slice(0,8);
+    GOLD.ok=true;
+    GOLD.date=new Date().toLocaleString('zh-CN',{hour12:false});
+    GOLD._lastCny=GOLD.cny;
     saveGoldCache();GOLD.updating=false;
     if(current==='gold'||current==='home')render();
     return true;
   }catch(e){
-    GOLD.updating=false;
-    GOLD.err='行情获取失败，显示上次数据';
+    GOLD.updating=false;GOLD.err=e.message||'获取失败';
+    if(current==='gold'||current==='home')render();
     return false;
   }
 }
@@ -560,7 +565,7 @@ function renderHome(){
       ${statsCard('💸 今日收益','¥'+fmtN(got))}
       ${statsCard('🪙 今日存入','¥'+fmtN(saved))}
       ${statsCard('🔥 连续打卡',streak,'天')}
-      ${statsCard('📈 沪金'+(g.live?'(实时)':''),'¥'+g.cny+'/克')}
+      ${statsCard('📈 国内金价','¥'+g.cny,'/克')}
     </div>
     <div class="hint">点击下方卡片进入对应栏目，查看详情与录入。</div>
     <div class="nav-grid" style="margin-top:12px;">
@@ -798,13 +803,13 @@ function renderGold(){
   return `${moduleHeader(MODULES[11])}
   <div class="card"><h2>📈 实时金价 <span style="font-size:10px;color:#c9a6b1;font-weight:400;margin-left:auto;">${live?'🔴 实时':'⚪ 参考'} ${upd}</span></h2>
   <div class="stats">
-    ${statsCard('沪金 99','¥'+g.cny,'/克')}
+    ${statsCard('国内金价','¥'+g.cny,'/克')}
     ${statsCard('伦敦金','$'+g.usd,'/盎司')}
-    ${statsCard('沪金涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
-    ${statsCard('伦敦银','¥'+(g.silver==='--'?'--':g.silver),'/克')}
+    ${statsCard('今日涨跌',(up?'▲':'▼')+Math.abs(g.chg)+'%')}
+    ${statsCard('白银','¥'+(g.silver==='--'?'--':g.silver),'/克')}
   </div>
   <div class="form" style="margin-top:8px;"><button class="btn-main" data-a="refreshGold" style="flex:1;">🔄 刷新行情${GOLD.updating?' 获取中…':''}</button></div>
-  <div class="hint" style="text-align:center;">${live?`数据来源：新浪财经行情接口 · 行情时间 ${g.time||'--'} · 打开页面自动刷新`:'⚠️ 暂未获取到实时行情，显示的是参考值，点击上方按钮重试'}</div></div>
+  <div class="hint" style="text-align:center;">${live?`数据来源：gold-api.com 实时金价 × 美元人民币汇率${GOLD.fx?'（'+GOLD.fx+'）':''} · 更新于 ${g.time||'--'}`:'⚠️ 暂未获取到实时行情'+(GOLD.err?'：'+GOLD.err:'')+'，点击上方按钮重试'}</div></div>
   <div class="card"><h2>📰 财经简要资讯</h2>
   ${pick(GOLD_NEWS,4).map(it=>`<div class="info-item"><div class="i-title">${it.title}</div><div class="i-desc">${it.desc}</div><div class="i-src">📎 来源：${it.src}</div></div>`).join('')}</div>
   <div class="card"><h2>🌷 一句话解读</h2>
@@ -931,7 +936,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
   window.addEventListener('load',()=>{
     const cur=DB._ver||'';
-    const V='v10';
+    const V='v11';
     if(cur!==V){
       DB._ver=V;save();
       if(cur&&navigator.onLine)setTimeout(()=>location.reload(),300);
